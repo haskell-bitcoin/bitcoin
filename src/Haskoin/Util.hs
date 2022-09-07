@@ -25,7 +25,6 @@ module Haskoin.Util (
     -- * Maybe & Either Helpers
     eitherToMaybe,
     maybeToEither,
-    liftEither,
     liftMaybe,
 
     -- * Other Helpers
@@ -58,7 +57,7 @@ module Haskoin.Util (
 ) where
 
 import Control.Monad
-import Control.Monad.Except (ExceptT (..), liftEither)
+import Control.Monad.Trans.Except (ExceptT (..))
 import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -154,7 +153,7 @@ maybeToEither err = maybe (Left err) Right
 
 -- | Lift a 'Maybe' computation into the 'ExceptT' monad.
 liftMaybe :: Monad m => b -> Maybe a -> ExceptT b m a
-liftMaybe err = liftEither . maybeToEither err
+liftMaybe err = ExceptT . pure . maybeToEither err
 
 
 -- Various helpers

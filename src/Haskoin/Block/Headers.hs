@@ -72,19 +72,19 @@ module Haskoin.Block.Headers (
 import Control.Applicative ((<|>))
 import Control.DeepSeq
 import Control.Monad (guard, mzero, unless, when)
-import Control.Monad.Except (
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (
     ExceptT (..),
     runExceptT,
-    throwError,
+    throwE,
  )
-import Control.Monad.State.Strict as State (
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.State.Strict as State (
     StateT,
     get,
     gets,
-    lift,
     modify,
  )
-import Control.Monad.Trans.Maybe
 import Data.Binary (Binary (..))
 import Data.Bits (shiftL, shiftR, (.&.))
 import qualified Data.ByteString as B
@@ -332,7 +332,7 @@ connectBlocks _ _ [] = return $ Right []
 connectBlocks net t bhs@(bh : _) =
     runExceptT $ do
         unless (chained bhs) $
-            throwError "Blocks to connect do not form a chain"
+            throwE "Blocks to connect do not form a chain"
         par <-
             maybeToExceptT
                 "Could not get parent block"
@@ -356,13 +356,13 @@ connectBlocks net t bhs@(bh : _) =
                 case skM of
                     Just sk -> return sk
                     Nothing ->
-                        throwError $
+                        throwE $
                             "BUG: Could not get skip for block "
                                 ++ show (headerHash $ nodeHeader par)
             | otherwise = do
                 let sn = ls !! fromIntegral (nodeHeight par - sh)
                 when (nodeHeight sn /= sh) $
-                    throwError "BUG: Node height not right in skip"
+                    throwE "BUG: Node height not right in skip"
                 return sn
             where
                 sh = skipHeight (nodeHeight par + 1)
@@ -403,7 +403,7 @@ connectBlock net t bh =
             case skM of
                 Just sk -> return sk
                 Nothing ->
-                    throwError $
+                    throwE $
                         "BUG: Could not get skip for block "
                             ++ show (headerHash $ nodeHeader par)
         bb <- lift getBestBlockHeader

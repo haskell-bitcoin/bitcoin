@@ -20,6 +20,7 @@ import GHC.Generics (Generic)
 import Haskoin.Block.Common
 import Text.Read
 
+
 -- | Network definition.
 data Network = Network
     { -- | lowercase alphanumeric and dashes
@@ -74,15 +75,8 @@ data Network = Network
       getEdaBlockHeight :: !(Maybe Word32)
     , -- | DAA start block height
       getDaaBlockHeight :: !(Maybe Word32)
-    , -- | asert3-2d algorithm activation time
-      -- TODO: Replace with block height after fork
-      getAsertActivationTime :: !(Maybe Word32)
-    , -- | asert3-2d algorithm halflife (not used for non-BCH networks)
-      getAsertHalfLife :: !Integer
     , -- | segregated witness active
       getSegWit :: !Bool
-    , -- | 'CashAddr' prefix (for Bitcoin Cash)
-      getCashAddrPrefix :: !(Maybe Text)
     , -- | 'Bech32' prefix (for SegWit network)
       getBech32Prefix :: !(Maybe Text)
     , -- | Replace-By-Fee (BIP-125)

@@ -31,11 +31,13 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Text.Read
 
+
 serialVals :: [SerialBox]
 serialVals =
     [ SerialBox arbitraryScriptOp
     , SerialBox arbitraryScript
     ]
+
 
 readVals :: [ReadBox]
 readVals =
@@ -47,6 +49,7 @@ readVals =
     , ReadBox (arbitraryScriptOutput =<< arbitraryNetwork)
     ]
 
+
 jsonVals :: [JsonBox]
 jsonVals =
     [ JsonBox $ arbitraryScriptOutput =<< arbitraryNetwork
@@ -55,11 +58,11 @@ jsonVals =
     , JsonBox $ fst <$> (arbitrarySigInput =<< arbitraryNetwork)
     ]
 
+
 spec :: Spec
 spec = do
     testIdentity serialVals readVals jsonVals []
     describe "btc scripts" $ props btc
-    describe "bch scripts" $ props bch
     describe "multi signatures" $
         zipWithM_ (curry mapMulSigVector) mulSigVectors [0 ..]
     describe "signature decoding" $
@@ -70,6 +73,7 @@ spec = do
     describe "Script vectors" $
         it "Can encode script vectors" encodeScriptVector
 
+
 props :: Network -> Spec
 props net = do
     standardSpec net
@@ -79,6 +83,7 @@ props net = do
     forkIdScriptSpec net
     sigHashSpec net
     txSigHashSpec net
+
 
 standardSpec :: Network -> Spec
 standardSpec net = do
@@ -111,6 +116,7 @@ standardSpec net = do
             `shouldBe` Right (RegularInput (SpendMulSig [TxSignatureEmpty]))
         decodeInput net (Script [OP_0, OP_0, OP_0, OP_0])
             `shouldBe` Right (RegularInput (SpendMulSig $ replicate 3 TxSignatureEmpty))
+
 
 scriptSpec :: Network -> Spec
 scriptSpec net =
@@ -162,6 +168,7 @@ scriptSpec net =
                         "OK" -> assertBool desc $ ver decodedOutput
                         _ -> assertBool desc (not $ ver decodedOutput)
 
+
 forkIdScriptSpec :: Network -> Spec
 forkIdScriptSpec net =
     when (isJust (getSigHashForkId net)) $
@@ -196,43 +203,48 @@ forkIdScriptSpec net =
                     "OK" -> ver `shouldBe` True
                     _ -> ver `shouldBe` False
 
+
 creditTx :: ByteString -> Word64 -> Tx
 creditTx scriptPubKey val =
     Tx 1 [txI] [txO] [] 0
-  where
-    txO = TxOut{outValue = val, scriptOutput = scriptPubKey}
-    txI =
-        TxIn
-            { prevOutput = nullOutPoint
-            , scriptInput = runPutS $ serialize $ Script [OP_0, OP_0]
-            , txInSequence = maxBound
-            }
+    where
+        txO = TxOut{outValue = val, scriptOutput = scriptPubKey}
+        txI =
+            TxIn
+                { prevOutput = nullOutPoint
+                , scriptInput = runPutS $ serialize $ Script [OP_0, OP_0]
+                , txInSequence = maxBound
+                }
+
 
 spendTx :: ByteString -> Word64 -> ByteString -> Tx
 spendTx scriptPubKey val scriptSig =
     Tx 1 [txI] [txO] [] 0
-  where
-    txO = TxOut{outValue = val, scriptOutput = B.empty}
-    txI =
-        TxIn
-            { prevOutput = OutPoint (txHash $ creditTx scriptPubKey val) 0
-            , scriptInput = scriptSig
-            , txInSequence = maxBound
-            }
+    where
+        txO = TxOut{outValue = val, scriptOutput = B.empty}
+        txI =
+            TxIn
+                { prevOutput = OutPoint (txHash $ creditTx scriptPubKey val) 0
+                , scriptInput = scriptSig
+                , txInSequence = maxBound
+                }
+
 
 parseScript :: String -> ByteString
 parseScript str =
     B.concat $ fromMaybe err $ mapM f $ words str
-  where
-    f = decodeHex . cs . dropHex . replaceToken
-    dropHex ('0' : 'x' : xs) = xs
-    dropHex xs = xs
-    err = error $ "Could not decode script: " <> str
+    where
+        f = decodeHex . cs . dropHex . replaceToken
+        dropHex ('0' : 'x' : xs) = xs
+        dropHex xs = xs
+        err = error $ "Could not decode script: " <> str
+
 
 replaceToken :: String -> String
 replaceToken str = case readMaybe $ "OP_" <> str of
     Just opcode -> "0x" <> cs (encodeHex $ runPutS $ serialize (opcode :: ScriptOp))
     _ -> str
+
 
 strictSigSpec :: Network -> Spec
 strictSigSpec net =
@@ -249,6 +261,7 @@ strictSigSpec net =
             length vectors `shouldBe` 17
             forM_ vectors $ \sig ->
                 decodeTxSig net sig `shouldSatisfy` isLeft
+
 
 txSigHashSpec :: Network -> Spec
 txSigHashSpec net =
@@ -276,6 +289,7 @@ txSigHashSpec net =
                             =<< decodeHex (cs resStr)
                 Just (txSigHash net tx s 0 i sh) `shouldBe` res
 
+
 txSigHashForkIdSpec :: Network -> Spec
 txSigHashForkIdSpec net =
     when (getNetworkName net == "btc") $
@@ -300,6 +314,7 @@ txSigHashForkIdSpec net =
                     sh = fromIntegral shI
                     res = eitherToMaybe . runGetS deserialize =<< decodeHex (cs resStr)
                 Just (txSigHashForkId net tx s val i sh) `shouldBe` res
+
 
 sigHashSpec :: Network -> Spec
 sigHashSpec net = do
@@ -353,44 +368,49 @@ sigHashSpec net = do
         property $
             forAll (arbitraryTx net) $ forAll arbitraryScript . testSigHashOne net
 
+
 testSigHashOne :: Network -> Tx -> Script -> Word64 -> Bool -> Property
 testSigHashOne net tx s val acp =
     not (null $ txIn tx)
         ==> if length (txIn tx) > length (txOut tx)
             then res `shouldBe` one
             else res `shouldNotBe` one
-  where
-    res = txSigHash net tx s val (length (txIn tx) - 1) (f sigHashSingle)
-    one = "0100000000000000000000000000000000000000000000000000000000000000"
-    f =
-        if acp
-            then setAnyoneCanPayFlag
-            else id
+    where
+        res = txSigHash net tx s val (length (txIn tx) - 1) (f sigHashSingle)
+        one = "0100000000000000000000000000000000000000000000000000000000000000"
+        f =
+            if acp
+                then setAnyoneCanPayFlag
+                else id
+
 
 {- Parse tests from bitcoin-qt repository -}
 
 mapMulSigVector :: ((Text, Text), Int) -> Spec
 mapMulSigVector (v, i) =
     it name $ runMulSigVector v
-  where
-    name = "check multisig vector " <> show i
+    where
+        name = "check multisig vector " <> show i
+
 
 runMulSigVector :: (Text, Text) -> Assertion
 runMulSigVector (a, ops) = assertBool "multisig vector" $ Just a == b
-  where
-    s = do
-        s' <- decodeHex ops
-        eitherToMaybe $ runGetS deserialize s'
-    b = do
-        o <- s
-        d <- eitherToMaybe $ decodeOutput o
-        addrToText btc $ payToScriptAddress d
+    where
+        s = do
+            s' <- decodeHex ops
+            eitherToMaybe $ runGetS deserialize s'
+        b = do
+            o <- s
+            d <- eitherToMaybe $ decodeOutput o
+            addrToText btc $ payToScriptAddress d
+
 
 sigDecodeMap :: Network -> (Text, Int) -> Spec
 sigDecodeMap net (_, i) =
     it ("check signature " ++ show i) func
-  where
-    func = testSigDecode net $ scriptSigSignatures !! i
+    where
+        func = testSigDecode net $ scriptSigSignatures !! i
+
 
 testSigDecode :: Network -> Text -> Assertion
 testSigDecode net str =
@@ -403,6 +423,7 @@ testSigDecode net str =
                 ]
             )
             $ isRight eitherSig
+
 
 mulSigVectors :: [(Text, Text)]
 mulSigVectors =
@@ -417,6 +438,7 @@ mulSigVectors =
           \322a1863d4621353ae"
         )
     ]
+
 
 scriptSigSignatures :: [Text]
 scriptSigSignatures =
@@ -434,30 +456,31 @@ scriptSigSignatures =
       -- \e18fe1e7d1510db501"
     ]
 
+
 encodeScriptVector :: Assertion
 encodeScriptVector =
     assertEqual "Encode script" res (encodeHex $ runPutS $ serialize s)
-  where
-    res =
-        "514104cc71eb30d653c0c3163990c47b976f3fb3f37cccdcbedb169a1dfef58b\
-        \bfbfaff7d8a473e7e2e6d317b87bafe8bde97e3cf8f065dec022b51d11fcdd0d\
-        \348ac4410461cbdcc5409fb4b4d42b51d33381354d80e550078cb532a34bfa2f\
-        \cfdeb7d76519aecc62770f5b0e4ef8551946d8a540911abe3e7854a26f39f58b\
-        \25c15342af52ae"
-    s =
-        Script
-            [ OP_1
-            , opPushData $
-                d
-                    "04cc71eb30d653c0c3163990c47b976f3fb3f37cccdcbedb169a1dfef5\
-                    \8bbfbfaff7d8a473e7e2e6d317b87bafe8bde97e3cf8f065dec022b51d\
-                    \11fcdd0d348ac4"
-            , opPushData $
-                d
-                    "0461cbdcc5409fb4b4d42b51d33381354d80e550078cb532a34bfa2fcf\
-                    \deb7d76519aecc62770f5b0e4ef8551946d8a540911abe3e7854a26f39\
-                    \f58b25c15342af"
-            , OP_2
-            , OP_CHECKMULTISIG
-            ]
-    d = fromJust . decodeHex
+    where
+        res =
+            "514104cc71eb30d653c0c3163990c47b976f3fb3f37cccdcbedb169a1dfef58b\
+            \bfbfaff7d8a473e7e2e6d317b87bafe8bde97e3cf8f065dec022b51d11fcdd0d\
+            \348ac4410461cbdcc5409fb4b4d42b51d33381354d80e550078cb532a34bfa2f\
+            \cfdeb7d76519aecc62770f5b0e4ef8551946d8a540911abe3e7854a26f39f58b\
+            \25c15342af52ae"
+        s =
+            Script
+                [ OP_1
+                , opPushData $
+                    d
+                        "04cc71eb30d653c0c3163990c47b976f3fb3f37cccdcbedb169a1dfef5\
+                        \8bbfbfaff7d8a473e7e2e6d317b87bafe8bde97e3cf8f065dec022b51d\
+                        \11fcdd0d348ac4"
+                , opPushData $
+                    d
+                        "0461cbdcc5409fb4b4d42b51d33381354d80e550078cb532a34bfa2fcf\
+                        \deb7d76519aecc62770f5b0e4ef8551946d8a540911abe3e7854a26f39\
+                        \f58b25c15342af"
+                , OP_2
+                , OP_CHECKMULTISIG
+                ]
+        d = fromJust . decodeHex

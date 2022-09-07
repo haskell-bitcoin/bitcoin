@@ -22,6 +22,7 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Text.Printf (printf)
 
+
 serialVals :: [SerialBox]
 serialVals =
     [ SerialBox (arbitraryBlock =<< arbitraryNetwork)
@@ -33,6 +34,7 @@ serialVals =
     , SerialBox arbitraryMerkleBlock
     , SerialBox arbitraryBlockNode
     ]
+
 
 readVals :: [ReadBox]
 readVals =
@@ -46,6 +48,7 @@ readVals =
     , ReadBox arbitraryBlockNode
     ]
 
+
 jsonVals :: [JsonBox]
 jsonVals =
     [ JsonBox (arbitraryBlock =<< arbitraryNetwork)
@@ -53,43 +56,26 @@ jsonVals =
     , JsonBox arbitraryBlockHeader
     ]
 
+
 myTime :: Timestamp
 myTime = 1499083075
 
+
 withChain :: Network -> State HeaderMemory a -> a
 withChain net f = evalState f (initialChain net)
+
 
 chain :: BlockHeaders m => Network -> BlockHeader -> Int -> m ()
 chain net bh i = do
     bnsE <- connectBlocks net myTime bhs
     either error (const $ return ()) bnsE
-  where
-    bhs = appendBlocks net 6 bh i
+    where
+        bhs = appendBlocks net 6 bh i
+
 
 spec :: Spec
 spec = do
     testIdentity serialVals readVals jsonVals []
-    describe "blockchain headers" $ do
-        it "gets best block on bchRegTest" $
-            let net = bchRegTest
-                bb =
-                    withChain net $ do
-                        chain net (getGenesisHeader net) 100
-                        getBestBlockHeader
-             in nodeHeight bb `shouldBe` 100
-        it "builds a block locator on bchRegTest" $
-            let net = bchRegTest
-                loc =
-                    withChain net $ do
-                        chain net (getGenesisHeader net) 100
-                        bb <- getBestBlockHeader
-                        blockLocatorNodes bb
-                heights = map nodeHeight loc
-             in heights `shouldBe` [100, 99 .. 90] <> [88, 84, 76, 60, 28, 0]
-        it "follows split chains on bchRegTest" $
-            let net = bchRegTest
-                bb = withChain net $ splitChain net >> getBestBlockHeader
-             in nodeHeight bb `shouldBe` 4035
     describe "block hash" $ do
         prop "encodes and decodes block hash" $
             forAll arbitraryBlockHash $ \h ->
@@ -120,6 +106,7 @@ spec = do
         it "computes bitcoin block subsidy correctly" (testSubsidy btc)
         it "computes regtest block subsidy correctly" (testSubsidy btcRegTest)
 
+
 -- 0 → → 2015 → → → → → → → 4031
 --       ↓
 --       → → 2035 → → → → → → 4035*
@@ -147,37 +134,41 @@ splitChain net = do
         error $
             "Split point wrong between blocks 2185 and 4035: "
                 ++ show (nodeHeight sp2)
-  where
-    e n bn =
-        unless (nodeHeight bn == n) $
-            error $
-                "Node height "
-                    ++ show (nodeHeight bn)
-                    ++ " of first chunk should be "
-                    ++ show n
-    go seed start n = do
-        let bhs = appendBlocks net seed start n
-        bnE <- connectBlocks net myTime bhs
-        case bnE of
-            Right bn -> return bn
-            Left ex -> error ex
+    where
+        e n bn =
+            unless (nodeHeight bn == n) $
+                error $
+                    "Node height "
+                        ++ show (nodeHeight bn)
+                        ++ " of first chunk should be "
+                        ++ show n
+        go seed start n = do
+            let bhs = appendBlocks net seed start n
+            bnE <- connectBlocks net myTime bhs
+            case bnE of
+                Right bn -> return bn
+                Left ex -> error ex
+
 
 {- Merkle Trees -}
 
 testTreeWidth :: Int -> Property
 testTreeWidth i = i /= 0 ==> calcTreeWidth (abs i) (calcTreeHeight $ abs i) == 1
 
+
 testBaseWidth :: Int -> Property
 testBaseWidth i = i /= 0 ==> calcTreeWidth (abs i) 0 == abs i
+
 
 buildExtractTree :: Network -> [(TxHash, Bool)] -> Bool
 buildExtractTree net txs =
     r == buildMerkleRoot (map fst txs) && m == map fst (filter snd txs)
-  where
-    (f, h) = buildPartialMerkle txs
-    (r, m) =
-        fromRight (error "Could not extract matches from Merkle tree") $
-            extractMatches net f h (length txs)
+    where
+        (f, h) = buildPartialMerkle txs
+        (r, m) =
+            fromRight (error "Could not extract matches from Merkle tree") $
+                extractMatches net f h (length txs)
+
 
 testCompact :: Assertion
 testCompact = do
@@ -187,6 +178,7 @@ testCompact = do
     assertEqual "vector 4" (0xc0de000000, False) (decodeCompact 0x0600c0de)
     assertEqual "vector 5" 0x05c0de00 (encodeCompact (-0x40de000000))
     assertEqual "vector 6" (-0x40de000000, False) (decodeCompact 0x05c0de00)
+
 
 testCompactBitcoinCore :: Assertion
 testCompactBitcoinCore = do
@@ -268,12 +260,14 @@ testCompactBitcoinCore = do
         "vector 9 (decode) (positive)"
         ((> 0) . fst $ decodeCompact 0xff123456)
 
+
 runMerkleVector :: (Text, [Text]) -> Assertion
 runMerkleVector (r, hs) =
     assertBool "merkle vector" $
         buildMerkleRoot (map f hs) == getTxHash (f r)
-  where
-    f = fromJust . hexToTxHash
+    where
+        f = fromJust . hexToTxHash
+
 
 merkleVectors :: [(Text, [Text])]
 merkleVectors =
@@ -369,21 +363,25 @@ merkleVectors =
         )
     ]
 
+
 testSubsidy :: Network -> Assertion
 testSubsidy net = go (2 * 50 * 100 * 1000 * 1000) 0
-  where
-    go previous_subsidy halvings = do
-        let height = halvings * getHalvingInterval net
-            subsidy = computeSubsidy net height
-        if halvings >= 64
-            then subsidy `shouldBe` 0
-            else do
-                subsidy `shouldBe` (previous_subsidy `div` 2)
-                go subsidy (halvings + 1)
+    where
+        go previous_subsidy halvings = do
+            let height = halvings * getHalvingInterval net
+                subsidy = computeSubsidy net height
+            if halvings >= 64
+                then subsidy `shouldBe` 0
+                else do
+                    subsidy `shouldBe` (previous_subsidy `div` 2)
+                    go subsidy (halvings + 1)
+
 
 data AsertBlock = AsertBlock Int Integer Integer Word32
 
+
 data AsertVector = AsertVector String Integer Integer Word32 [AsertBlock]
+
 
 readAsertVector :: FilePath -> IO AsertVector
 readAsertVector p = do
@@ -400,14 +398,16 @@ readAsertVector p = do
             anchor_parent_time
             anchor_nbits
             blocks
-  where
-    f [i, h, t, g] = AsertBlock (read i) (read h) (read t) (read g)
-    f _ = undefined
+    where
+        f [i, h, t, g] = AsertBlock (read i) (read h) (read t) (read g)
+        f _ = undefined
+
 
 asertTests :: FilePath -> SpecWith ()
 asertTests file = do
     v@(AsertVector d _ _ _ _) <- runIO $ readAsertVector file
     it d $ testAsertBits v
+
 
 testAsertBits :: AsertVector -> Assertion
 testAsertBits (AsertVector _ anchor_height anchor_parent_time anchor_bits blocks) =

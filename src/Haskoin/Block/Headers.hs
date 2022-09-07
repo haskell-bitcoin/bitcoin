@@ -5,16 +5,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{- |
-Module      : Haskoin.Block.Headers
-Copyright   : No rights reserved
-License     : MIT
-Maintainer  : jprupp@protonmail.ch
-Stability   : experimental
-Portability : POSIX
-
-Block chain header synchronization and proof-of-work consensus functions.
--}
+-- |
+--Module      : Haskoin.Block.Headers
+--Copyright   : No rights reserved
+--License     : MIT
+--Maintainer  : jprupp@protonmail.ch
+--Stability   : experimental
+--Portability : POSIX
+--
+--Block chain header synchronization and proof-of-work consensus functions.
 module Haskoin.Block.Headers (
     -- * Block Headers
     BlockNode (..),
@@ -53,7 +52,6 @@ module Haskoin.Block.Headers (
     nextWorkRequired,
     nextEdaWorkRequired,
     nextDaaWorkRequired,
-    nextAsertWorkRequired,
     computeAsertBits,
     computeTarget,
     getSuitableBlock,
@@ -114,23 +112,24 @@ import Haskoin.Data
 import Haskoin.Transaction.Genesis
 import Haskoin.Util
 
-{- | Short version of the block hash. Uses the good end of the hash (the part
- that doesn't have a long string of zeroes).
--}
+
+-- | Short version of the block hash. Uses the good end of the hash (the part
+-- that doesn't have a long string of zeroes).
 type ShortBlockHash = Word64
 
-{- | Memory-based map to a serialized 'BlockNode' data structure.
- 'ShortByteString' is used to avoid memory fragmentation and make the data
- structure compact.
--}
+
+-- | Memory-based map to a serialized 'BlockNode' data structure.
+-- 'ShortByteString' is used to avoid memory fragmentation and make the data
+-- structure compact.
 type BlockMap = HashMap ShortBlockHash ShortByteString
+
 
 -- | Represents accumulated work in the block chain so far.
 type BlockWork = Integer
 
-{- | Data structure representing a block header and its position in the
- block chain.
--}
+
+-- | Data structure representing a block header and its position in the
+-- block chain.
 data BlockNode = BlockNode
     { nodeHeader :: !BlockHeader
     , nodeHeight :: !BlockHeight
@@ -140,6 +139,7 @@ data BlockNode = BlockNode
       nodeSkip :: !BlockHash
     }
     deriving (Show, Read, Generic, Hashable, NFData)
+
 
 instance Serial BlockNode where
     deserialize = do
@@ -161,19 +161,24 @@ instance Serial BlockNode where
             0 -> return ()
             _ -> serialize $ nodeSkip bn
 
+
 instance Serialize BlockNode where
     put = serialize
     get = deserialize
+
 
 instance Binary BlockNode where
     put = serialize
     get = deserialize
 
+
 instance Eq BlockNode where
     (==) = (==) `on` nodeHeader
 
+
 instance Ord BlockNode where
     compare = compare `on` nodeHeight
+
 
 -- | Memory-based header tree.
 data HeaderMemory = HeaderMemory
@@ -182,29 +187,36 @@ data HeaderMemory = HeaderMemory
     }
     deriving (Eq, Typeable, Show, Read, Generic, Hashable, NFData)
 
+
 -- | Typeclass for block header chain storage monad.
 class Monad m => BlockHeaders m where
     -- | Add a new 'BlockNode' to the chain. Does not validate.
     addBlockHeader :: BlockNode -> m ()
 
+
     -- | Get a 'BlockNode' associated with a 'BlockHash'.
     getBlockHeader :: BlockHash -> m (Maybe BlockNode)
+
 
     -- | Locate the 'BlockNode' for the highest block in the chain
     getBestBlockHeader :: m BlockNode
 
+
     -- | Set the highest block in the chain.
     setBestBlockHeader :: BlockNode -> m ()
+
 
     -- | Add a continuous bunch of block headers the chain. Does not validate.
     addBlockHeaders :: [BlockNode] -> m ()
     addBlockHeaders = mapM_ addBlockHeader
+
 
 instance Monad m => BlockHeaders (StateT HeaderMemory m) where
     addBlockHeader = modify . addBlockHeaderMemory
     getBlockHeader bh = getBlockHeaderMemory bh <$> State.get
     getBestBlockHeader = gets memoryBestHeader
     setBestBlockHeader bn = modify $ \s -> s{memoryBestHeader = bn}
+
 
 -- | Initialize memory-based chain.
 initialChain :: Network -> HeaderMemory
@@ -214,6 +226,7 @@ initialChain net =
         , memoryBestHeader = genesisNode net
         }
 
+
 -- | Initialize map for memory-based chain.
 genesisMap :: Network -> BlockMap
 genesisMap net =
@@ -221,11 +234,13 @@ genesisMap net =
         (shortBlockHash (headerHash (getGenesisHeader net)))
         (toShort (runPutS (serialize (genesisNode net))))
 
+
 -- | Add block header to memory block map.
 addBlockHeaderMemory :: BlockNode -> HeaderMemory -> HeaderMemory
 addBlockHeaderMemory bn s@HeaderMemory{..} =
     let bm' = addBlockToMap bn memoryHeaderMap
      in s{memoryHeaderMap = bm'}
+
 
 -- | Get block header from memory block map.
 getBlockHeaderMemory :: BlockHash -> HeaderMemory -> Maybe BlockNode
@@ -233,13 +248,14 @@ getBlockHeaderMemory bh HeaderMemory{..} = do
     bs <- shortBlockHash bh `HashMap.lookup` memoryHeaderMap
     eitherToMaybe . runGetS deserialize $ fromShort bs
 
-{- | Calculate short block hash taking eight non-zero bytes from the 16-byte
- hash. This function will take the bytes that are not on the zero-side of the
- hash, making colissions between short block hashes difficult.
--}
+
+-- | Calculate short block hash taking eight non-zero bytes from the 16-byte
+-- hash. This function will take the bytes that are not on the zero-side of the
+-- hash, making colissions between short block hashes difficult.
 shortBlockHash :: BlockHash -> ShortBlockHash
 shortBlockHash =
     either error id . runGetS deserialize . B.take 8 . runPutS . serialize
+
 
 -- | Add a block to memory-based block map.
 addBlockToMap :: BlockNode -> BlockMap -> BlockMap
@@ -248,9 +264,9 @@ addBlockToMap node =
         (shortBlockHash $ headerHash $ nodeHeader node)
         (toShort $ runPutS $ serialize node)
 
-{- | Get the ancestor of the provided 'BlockNode' at the specified
- 'BlockHeight'.
--}
+
+-- | Get the ancestor of the provided 'BlockNode' at the specified
+-- 'BlockHeight'.
 getAncestor ::
     BlockHeaders m =>
     BlockHeight ->
@@ -259,36 +275,38 @@ getAncestor ::
 getAncestor height node
     | height > nodeHeight node = return Nothing
     | otherwise = go node
-  where
-    e1 = error "Could not get skip header"
-    e2 = error "Could not get previous block header"
-    go walk
-        | nodeHeight walk > height =
-            let heightSkip = skipHeight (nodeHeight walk)
-                heightSkipPrev = skipHeight (nodeHeight walk - 1)
-             in if not (isGenesis walk)
-                    && ( heightSkip == height
-                            || ( heightSkip > height
-                                    && not
-                                        ( heightSkipPrev < heightSkip - 2
-                                            && heightSkipPrev >= height
-                                        )
-                               )
-                       )
-                    then do
-                        walk' <- fromMaybe e1 <$> getBlockHeader (nodeSkip walk)
-                        go walk'
-                    else do
-                        walk' <-
-                            fromMaybe e2
-                                <$> getBlockHeader (prevBlock (nodeHeader walk))
-                        go walk'
-        | otherwise = return $ Just walk
+    where
+        e1 = error "Could not get skip header"
+        e2 = error "Could not get previous block header"
+        go walk
+            | nodeHeight walk > height =
+                let heightSkip = skipHeight (nodeHeight walk)
+                    heightSkipPrev = skipHeight (nodeHeight walk - 1)
+                 in if not (isGenesis walk)
+                        && ( heightSkip == height
+                                || ( heightSkip > height
+                                        && not
+                                            ( heightSkipPrev < heightSkip - 2
+                                                && heightSkipPrev >= height
+                                            )
+                                   )
+                           )
+                        then do
+                            walk' <- fromMaybe e1 <$> getBlockHeader (nodeSkip walk)
+                            go walk'
+                        else do
+                            walk' <-
+                                fromMaybe e2
+                                    <$> getBlockHeader (prevBlock (nodeHeader walk))
+                            go walk'
+            | otherwise = return $ Just walk
+
 
 -- | Is the provided 'BlockNode' the Genesis block?
 isGenesis :: BlockNode -> Bool
 isGenesis BlockNode{nodeHeight = 0} = True
 isGenesis _ = False
+
 
 -- | Build the genesis 'BlockNode' for the supplied 'Network'.
 genesisNode :: Network -> BlockNode
@@ -300,9 +318,9 @@ genesisNode net =
         , nodeSkip = headerHash (getGenesisHeader net)
         }
 
-{- | Validate a list of continuous block headers and import them to the
- block chain. Return 'Left' on failure with error information.
--}
+
+-- | Validate a list of continuous block headers and import them to the
+-- block chain. Return 'Left' on failure with error information.
 connectBlocks ::
     BlockHeaders m =>
     Network ->
@@ -328,44 +346,44 @@ connectBlocks net t bhs@(bh : _) =
                 when (bb' /= bb) $ lift $ setBestBlockHeader bb'
                 return bns
             _ -> undefined
-  where
-    chained (h1 : h2 : hs) = headerHash h1 == prevBlock h2 && chained (h2 : hs)
-    chained _ = True
-    skipit lbh ls par
-        | sh == nodeHeight lbh = return lbh
-        | sh < nodeHeight lbh = do
-            skM <- lift $ getAncestor sh lbh
-            case skM of
-                Just sk -> return sk
-                Nothing ->
-                    throwError $
-                        "BUG: Could not get skip for block "
-                            ++ show (headerHash $ nodeHeader par)
-        | otherwise = do
-            let sn = ls !! fromIntegral (nodeHeight par - sh)
-            when (nodeHeight sn /= sh) $
-                throwError "BUG: Node height not right in skip"
-            return sn
-      where
-        sh = skipHeight (nodeHeight par + 1)
-    go _ acc _ _ _ [] = return acc
-    go lbh acc bb par pars (h : hs) = do
-        sk <- skipit lbh acc par
-        bn <- ExceptT . return $ validBlock net t bb par pars h sk
-        go lbh (bn : acc) (chooseBest bn bb) bn (take 10 $ par : pars) hs
+    where
+        chained (h1 : h2 : hs) = headerHash h1 == prevBlock h2 && chained (h2 : hs)
+        chained _ = True
+        skipit lbh ls par
+            | sh == nodeHeight lbh = return lbh
+            | sh < nodeHeight lbh = do
+                skM <- lift $ getAncestor sh lbh
+                case skM of
+                    Just sk -> return sk
+                    Nothing ->
+                        throwError $
+                            "BUG: Could not get skip for block "
+                                ++ show (headerHash $ nodeHeader par)
+            | otherwise = do
+                let sn = ls !! fromIntegral (nodeHeight par - sh)
+                when (nodeHeight sn /= sh) $
+                    throwError "BUG: Node height not right in skip"
+                return sn
+            where
+                sh = skipHeight (nodeHeight par + 1)
+        go _ acc _ _ _ [] = return acc
+        go lbh acc bb par pars (h : hs) = do
+            sk <- skipit lbh acc par
+            bn <- ExceptT . return $ validBlock net t bb par pars h sk
+            go lbh (bn : acc) (chooseBest bn bb) bn (take 10 $ par : pars) hs
 
-{- | Block's parent. If the block header is in the store, its parent must also
- be there. No block header get deleted or pruned from the store.
--}
+
+-- | Block's parent. If the block header is in the store, its parent must also
+-- be there. No block header get deleted or pruned from the store.
 parentBlock ::
     BlockHeaders m =>
     BlockHeader ->
     m (Maybe BlockNode)
 parentBlock bh = getBlockHeader (prevBlock bh)
 
-{- | Validate and connect single block header to the block chain. Return 'Left'
- if fails to be validated.
--}
+
+-- | Validate and connect single block header to the block chain. Return 'Left'
+-- if fails to be validated.
 connectBlock ::
     BlockHeaders m =>
     Network ->
@@ -394,6 +412,7 @@ connectBlock net t bh =
         lift $ addBlockHeader bn
         when (bb /= bb') . lift $ setBestBlockHeader bb'
         return bn
+
 
 -- | Validate this block header. Build a 'BlockNode' if successful.
 validBlock ::
@@ -440,27 +459,29 @@ validBlock net t bb par pars bh sk = do
             , nodeSkip = headerHash $ nodeHeader sk
             }
 
-{- | Return the median of all provided timestamps. Can be unsorted. Error on
- empty list.
--}
+
+-- | Return the median of all provided timestamps. Can be unsorted. Error on
+-- empty list.
 medianTime :: [Timestamp] -> Timestamp
 medianTime ts
     | null ts = error "Cannot compute median time of empty header list"
     | otherwise = sort ts !! (length ts `div` 2)
 
-{- | Calculate the height of the skip (magic) block that corresponds to the
- given height. The block hash of the ancestor at that height will be placed on
- the 'BlockNode' structure to help locate ancestors at any height quickly.
--}
+
+-- | Calculate the height of the skip (magic) block that corresponds to the
+-- given height. The block hash of the ancestor at that height will be placed on
+-- the 'BlockNode' structure to help locate ancestors at any height quickly.
 skipHeight :: BlockHeight -> BlockHeight
 skipHeight height
     | height < 2 = 0
     | height .&. 1 /= 0 = invertLowestOne (invertLowestOne $ height - 1) + 1
     | otherwise = invertLowestOne height
 
+
 -- | Part of the skip black magic calculation.
 invertLowestOne :: BlockHeight -> BlockHeight
 invertLowestOne height = height .&. (height - 1)
+
 
 -- | Get a number of parents for the provided block.
 getParents ::
@@ -470,15 +491,16 @@ getParents ::
     -- | starts from immediate parent
     m [BlockNode]
 getParents = getpars []
-  where
-    getpars acc 0 _ = return $ reverse acc
-    getpars acc n BlockNode{..}
-        | nodeHeight == 0 = return $ reverse acc
-        | otherwise = do
-            parM <- getBlockHeader $ prevBlock nodeHeader
-            case parM of
-                Just bn -> getpars (bn : acc) (n - 1) bn
-                Nothing -> error "BUG: All non-genesis blocks should have a parent"
+    where
+        getpars acc 0 _ = return $ reverse acc
+        getpars acc n BlockNode{..}
+            | nodeHeight == 0 = return $ reverse acc
+            | otherwise = do
+                parM <- getBlockHeader $ prevBlock nodeHeader
+                case parM of
+                    Just bn -> getpars (bn : acc) (n - 1) bn
+                    Nothing -> error "BUG: All non-genesis blocks should have a parent"
+
 
 -- | Verify that checkpoint location is valid.
 validCP ::
@@ -493,9 +515,9 @@ validCP net height newChildHash =
         Just cpHash -> cpHash == newChildHash
         Nothing -> True
 
-{- | New block height above the last checkpoint imported. Used to prevent a
- reorg below the highest checkpoint that was already imported.
--}
+
+-- | New block height above the last checkpoint imported. Used to prevent a
+-- reorg below the highest checkpoint that was already imported.
 afterLastCP ::
     Network ->
     -- | best height
@@ -507,15 +529,15 @@ afterLastCP net bestHeight newChildHeight =
     case lM of
         Just l -> l < newChildHeight
         Nothing -> True
-  where
-    lM =
-        listToMaybe . reverse $
-            [c | (c, _) <- getCheckpoints net, c <= bestHeight]
+    where
+        lM =
+            listToMaybe . reverse $
+                [c | (c, _) <- getCheckpoints net, c <= bestHeight]
 
-{- | This block should be at least version 2 (BIP34). Block height must be
- included in the coinbase transaction to prevent non-unique transaction
- hashes.
--}
+
+-- | This block should be at least version 2 (BIP34). Block height must be
+-- included in the coinbase transaction to prevent non-unique transaction
+-- hashes.
 bip34 ::
     Network ->
     -- | new child height
@@ -527,6 +549,7 @@ bip34 net height hsh
     | fst (getBip34Block net) == 0 = True
     | fst (getBip34Block net) == height = snd (getBip34Block net) == hsh
     | otherwise = True
+
 
 -- | Check if the provided block height and version are valid.
 validVersion ::
@@ -542,9 +565,9 @@ validVersion net height version
     | version < 4 = height < getBip65Height net
     | otherwise = True
 
-{- | Find last block with normal, as opposed to minimum difficulty (for test
- networks).
--}
+
+-- | Find last block with normal, as opposed to minimum difficulty (for test
+-- networks).
 lastNoMinDiff :: BlockHeaders m => Network -> BlockNode -> m BlockNode
 lastNoMinDiff _ bn@BlockNode{nodeHeight = 0} = return bn
 lastNoMinDiff net bn@BlockNode{..} = do
@@ -561,9 +584,9 @@ lastNoMinDiff net bn@BlockNode{..} = do
             lastNoMinDiff net bn'
         else return bn
 
-{- | Returns the work required on a block header given the previous block. This
- coresponds to @bitcoind@ function @GetNextWorkRequired@ in @main.cpp@.
--}
+
+-- | Returns the work required on a block header given the previous block. This
+-- coresponds to @bitcoind@ function @GetNextWorkRequired@ in @main.cpp@.
 nextWorkRequired ::
     BlockHeaders m =>
     Network ->
@@ -571,28 +594,23 @@ nextWorkRequired ::
     BlockHeader ->
     m Word32
 nextWorkRequired net par bh = do
-    ma <- getAsertAnchor net
-    case asert ma <|> daa <|> eda <|> pow of
+    case daa <|> eda <|> pow of
         Just f -> f par bh
         Nothing -> error "Could not determine difficulty algorithm"
-  where
-    asert ma = do
-        anchor <- ma
-        guard (nodeHeight par > nodeHeight anchor)
-        return $ nextAsertWorkRequired net anchor
-    daa = do
-        daa_height <- getDaaBlockHeight net
-        guard (nodeHeight par + 1 >= daa_height)
-        return $ nextDaaWorkRequired net
-    eda = do
-        eda_height <- getEdaBlockHeight net
-        guard (nodeHeight par + 1 >= eda_height)
-        return $ nextEdaWorkRequired net
-    pow = return $ nextPowWorkRequired net
+    where
+        daa = do
+            daa_height <- getDaaBlockHeight net
+            guard (nodeHeight par + 1 >= daa_height)
+            return $ nextDaaWorkRequired net
+        eda = do
+            eda_height <- getEdaBlockHeight net
+            guard (nodeHeight par + 1 >= eda_height)
+            return $ nextEdaWorkRequired net
+        pow = return $ nextPowWorkRequired net
 
-{- | Find out the next amount of work required according to the Emergency
- Difficulty Adjustment (EDA) algorithm from Bitcoin Cash.
--}
+
+-- | Find out the next amount of work required according to the Emergency
+-- Difficulty Adjustment (EDA) algorithm from Bitcoin Cash.
 nextEdaWorkRequired ::
     BlockHeaders m => Network -> BlockNode -> BlockHeader -> m Word32
 nextEdaWorkRequired net par bh
@@ -618,15 +636,15 @@ nextEdaWorkRequired net par bh
                      in if getPowLimit net > ndiff
                             then encodeCompact (getPowLimit net)
                             else encodeCompact ndiff
-  where
-    minDifficulty =
-        blockTimestamp bh
-            > blockTimestamp (nodeHeader par) + getTargetSpacing net * 2
-    e1 = error "Could not get seventh ancestor of block"
+    where
+        minDifficulty =
+            blockTimestamp bh
+                > blockTimestamp (nodeHeader par) + getTargetSpacing net * 2
+        e1 = error "Could not get seventh ancestor of block"
 
-{- | Find the next amount of work required according to the Difficulty
- Adjustment Algorithm (DAA) from Bitcoin Cash.
--}
+
+-- | Find the next amount of work required according to the Difficulty
+-- Adjustment Algorithm (DAA) from Bitcoin Cash.
 nextDaaWorkRequired ::
     BlockHeaders m => Network -> BlockNode -> BlockHeader -> m Word32
 nextDaaWorkRequired net par bh
@@ -641,12 +659,13 @@ nextDaaWorkRequired net par bh
         if nextTarget > getPowLimit net
             then return $ encodeCompact (getPowLimit net)
             else return $ encodeCompact nextTarget
-  where
-    height = nodeHeight par
-    e1 = error "Cannot get ancestor at parent - 144 height"
-    minDifficulty =
-        blockTimestamp bh
-            > blockTimestamp (nodeHeader par) + getTargetSpacing net * 2
+    where
+        height = nodeHeight par
+        e1 = error "Cannot get ancestor at parent - 144 height"
+        minDifficulty =
+            blockTimestamp bh
+                > blockTimestamp (nodeHeader par) + getTargetSpacing net * 2
+
 
 mtp :: BlockHeaders m => BlockNode -> m Timestamp
 mtp bn
@@ -655,6 +674,7 @@ mtp bn
         pars <- getParents 11 bn
         return $ medianTime (map (blockTimestamp . nodeHeader) pars)
 
+
 firstGreaterOrEqual ::
     BlockHeaders m =>
     Network ->
@@ -662,12 +682,14 @@ firstGreaterOrEqual ::
     m (Maybe BlockNode)
 firstGreaterOrEqual = binSearch False
 
+
 lastSmallerOrEqual ::
     BlockHeaders m =>
     Network ->
     (BlockNode -> m Ordering) ->
     m (Maybe BlockNode)
 lastSmallerOrEqual = binSearch True
+
 
 binSearch ::
     BlockHeaders m =>
@@ -678,101 +700,75 @@ binSearch ::
 binSearch top net f = runMaybeT $ do
     (a, b) <- lift $ extremes net
     go a b
-  where
-    go a b = do
-        m <- lift $ middleBlock a b
-        a' <- lift $ f a
-        b' <- lift $ f b
-        m' <- lift $ f m
+    where
+        go a b = do
+            m <- lift $ middleBlock a b
+            a' <- lift $ f a
+            b' <- lift $ f b
+            m' <- lift $ f m
+            r (a, a') (b, b') (m, m')
         r (a, a') (b, b') (m, m')
-    r (a, a') (b, b') (m, m')
-        | out_of_bounds a' b' = mzero
-        | select_first a' = return a
-        | select_last b' = return b
-        | no_middle a b = choose_one a b
-        | is_between a' m' = go a m
-        | is_between m' b' = go m b
-        | otherwise = mzero
-    select_first a'
-        | not top = a' /= LT
-        | otherwise = False
-    select_last b'
-        | top = b' /= GT
-        | otherwise = False
-    out_of_bounds a' b'
-        | top = a' == GT
-        | otherwise = b' == LT
-    no_middle a b = nodeHeight b - nodeHeight a <= 1
-    is_between a' b' = a' /= GT && b' /= LT
-    choose_one a b
-        | top = return a
-        | otherwise = return b
+            | out_of_bounds a' b' = mzero
+            | select_first a' = return a
+            | select_last b' = return b
+            | no_middle a b = choose_one a b
+            | is_between a' m' = go a m
+            | is_between m' b' = go m b
+            | otherwise = mzero
+        select_first a'
+            | not top = a' /= LT
+            | otherwise = False
+        select_last b'
+            | top = b' /= GT
+            | otherwise = False
+        out_of_bounds a' b'
+            | top = a' == GT
+            | otherwise = b' == LT
+        no_middle a b = nodeHeight b - nodeHeight a <= 1
+        is_between a' b' = a' /= GT && b' /= LT
+        choose_one a b
+            | top = return a
+            | otherwise = return b
+
 
 extremes :: BlockHeaders m => Network -> m (BlockNode, BlockNode)
 extremes net = do
     b <- getBestBlockHeader
     return (genesisNode net, b)
 
+
 middleBlock :: BlockHeaders m => BlockNode -> BlockNode -> m BlockNode
 middleBlock a b =
     getAncestor h b >>= \case
         Nothing -> error "You fell into a pit full of mud and snakes"
         Just x -> return x
-  where
-    h = middleOf (nodeHeight a) (nodeHeight b)
+    where
+        h = middleOf (nodeHeight a) (nodeHeight b)
+
 
 middleOf :: Integral a => a -> a -> a
 middleOf a b = a + ((b - a) `div` 2)
 
--- TODO: Use known anchor after fork
-getAsertAnchor :: BlockHeaders m => Network -> m (Maybe BlockNode)
-getAsertAnchor net =
-    case getAsertActivationTime net of
-        Nothing -> return Nothing
-        Just act -> firstGreaterOrEqual net (f act)
-  where
-    f act bn = do
-        m <- mtp bn
-        return $ compare m act
-
--- | Find the next amount of work required according to the aserti3-2d algorithm.
-nextAsertWorkRequired ::
-    BlockHeaders m =>
-    Network ->
-    BlockNode ->
-    BlockNode ->
-    BlockHeader ->
-    m Word32
-nextAsertWorkRequired net anchor par bh = do
-    anchor_parent <-
-        fromMaybe e_fork
-            <$> getBlockHeader (prevBlock (nodeHeader anchor))
-    let anchor_parent_time = toInteger $ blockTimestamp $ nodeHeader anchor_parent
-        time_diff = current_time - anchor_parent_time
-    return $ computeAsertBits halflife anchor_bits time_diff height_diff
-  where
-    halflife = getAsertHalfLife net
-    anchor_height = toInteger $ nodeHeight anchor
-    anchor_bits = blockBits $ nodeHeader anchor
-    current_height = toInteger (nodeHeight par) + 1
-    height_diff = current_height - anchor_height
-    current_time = toInteger $ blockTimestamp bh
-    e_fork = error "Could not get fork block header"
 
 idealBlockTime :: Integer
 idealBlockTime = 10 * 60
 
+
 rBits :: Int
 rBits = 16
+
 
 radix :: Integer
 radix = 1 `shiftL` rBits
 
+
 maxBits :: Word32
 maxBits = 0x1d00ffff
 
+
 maxTarget :: Integer
 maxTarget = fst $ decodeCompact maxBits
+
 
 computeAsertBits ::
     Integer ->
@@ -790,25 +786,26 @@ computeAsertBits halflife anchor_bits time_diff height_diff =
                         then maxBits
                         else encodeCompact g4
         else error $ "Exponent not in range: " ++ show e2
-  where
-    g1 = fst (decodeCompact anchor_bits)
-    e1 =
-        ((time_diff - idealBlockTime * (height_diff + 1)) * radix)
-            `quot` halflife
-    s = e1 `shiftR` rBits
-    e2 = e1 - s * radix
-    g2 =
-        g1
-            * ( radix
-                    + ( (195766423245049 * e2 + 971821376 * e2 ^ 2 + 5127 * e2 ^ 3 + 2 ^ 47)
-                            `shiftR` (rBits * 3)
-                      )
-              )
-    g3 =
-        if s < 0
-            then g2 `shiftR` negate (fromIntegral s)
-            else g2 `shiftL` fromIntegral s
-    g4 = g3 `shiftR` rBits
+    where
+        g1 = fst (decodeCompact anchor_bits)
+        e1 =
+            ((time_diff - idealBlockTime * (height_diff + 1)) * radix)
+                `quot` halflife
+        s = e1 `shiftR` rBits
+        e2 = e1 - s * radix
+        g2 =
+            g1
+                * ( radix
+                        + ( (195766423245049 * e2 + 971821376 * e2 ^ 2 + 5127 * e2 ^ 3 + 2 ^ 47)
+                                `shiftR` (rBits * 3)
+                          )
+                  )
+        g3 =
+            if s < 0
+                then g2 `shiftR` negate (fromIntegral s)
+                else g2 `shiftL` fromIntegral s
+        g4 = g3 `shiftR` rBits
+
 
 -- | Compute Bitcoin Cash DAA target for a new block.
 computeTarget :: Network -> BlockNode -> BlockNode -> Integer
@@ -825,6 +822,7 @@ computeTarget net f l =
         work' = work `div` fromIntegral actualTimespan'
      in 2 ^ (256 :: Integer) `div` work'
 
+
 -- | Get suitable block for Bitcoin Cash DAA computation.
 getSuitableBlock :: BlockHeaders m => BlockNode -> m BlockNode
 getSuitableBlock par = do
@@ -832,9 +830,9 @@ getSuitableBlock par = do
     blocks <- (par :) <$> getParents 2 par
     return $ sortBy (compare `on` blockTimestamp . nodeHeader) blocks !! 1
 
-{- | Returns the work required on a block header given the previous block. This
- coresponds to bitcoind function GetNextWorkRequired in main.cpp.
--}
+
+-- | Returns the work required on a block header given the previous block. This
+-- coresponds to bitcoind function GetNextWorkRequired in main.cpp.
 nextPowWorkRequired ::
     BlockHeaders m => Network -> BlockNode -> BlockHeader -> m Word32
 nextPowWorkRequired net par bh
@@ -852,11 +850,12 @@ nextPowWorkRequired net par bh
         a <- fromMaybe e1 <$> getAncestor rh par
         let t = blockTimestamp $ nodeHeader a
         return $ calcNextWork net (nodeHeader par) t
-  where
-    e1 = error "Could not get ancestor for block header"
-    pt = blockTimestamp $ nodeHeader par
-    ht = blockTimestamp bh
-    delta = getTargetSpacing net * 2
+    where
+        e1 = error "Could not get ancestor for block header"
+        pt = blockTimestamp $ nodeHeader par
+        ht = blockTimestamp bh
+        delta = getTargetSpacing net * 2
+
 
 -- | Computes the work required for the first block in a new retarget period.
 calcNextWork ::
@@ -870,44 +869,47 @@ calcNextWork net header time
     | getPowNoRetargetting net = blockBits header
     | new > getPowLimit net = encodeCompact (getPowLimit net)
     | otherwise = encodeCompact new
-  where
-    s = blockTimestamp header - time
-    n
-        | s < getTargetTimespan net `div` 4 = getTargetTimespan net `div` 4
-        | s > getTargetTimespan net * 4 = getTargetTimespan net * 4
-        | otherwise = s
-    l = fst $ decodeCompact $ blockBits header
-    new = l * fromIntegral n `div` fromIntegral (getTargetTimespan net)
+    where
+        s = blockTimestamp header - time
+        n
+            | s < getTargetTimespan net `div` 4 = getTargetTimespan net `div` 4
+            | s > getTargetTimespan net * 4 = getTargetTimespan net * 4
+            | otherwise = s
+        l = fst $ decodeCompact $ blockBits header
+        new = l * fromIntegral n `div` fromIntegral (getTargetTimespan net)
 
-{- | Returns True if the difficulty target (bits) of the header is valid and the
- proof of work of the header matches the advertised difficulty target. This
- function corresponds to the function @CheckProofOfWork@ from @bitcoind@ in
- @main.cpp@.
--}
+
+-- | Returns True if the difficulty target (bits) of the header is valid and the
+-- proof of work of the header matches the advertised difficulty target. This
+-- function corresponds to the function @CheckProofOfWork@ from @bitcoind@ in
+-- @main.cpp@.
 isValidPOW :: Network -> BlockHeader -> Bool
 isValidPOW net h
     | target <= 0 || over || target > getPowLimit net = False
     | otherwise = blockPOW (headerHash h) <= fromIntegral target
-  where
-    (target, over) = decodeCompact $ blockBits h
+    where
+        (target, over) = decodeCompact $ blockBits h
+
 
 -- | Returns the proof of work of a block header hash as an 'Integer' number.
 blockPOW :: BlockHash -> Integer
 blockPOW = bsToInteger . B.reverse . runPutS . serialize
 
-{- | Returns the work represented by this block. Work is defined as the number
- of tries needed to solve a block in the average case with respect to the
- target.
--}
+
+-- | Returns the work represented by this block. Work is defined as the number
+-- of tries needed to solve a block in the average case with respect to the
+-- target.
 headerWork :: BlockHeader -> Integer
 headerWork bh = largestHash `div` (target + 1)
-  where
-    target = fst $ decodeCompact $ blockBits bh
-    largestHash = 1 `shiftL` 256
+    where
+        target = fst $ decodeCompact $ blockBits bh
+        largestHash = 1 `shiftL` 256
+
 
 -- | Number of blocks on average between difficulty cycles (2016 blocks).
 diffInterval :: Network -> Word32
 diffInterval net = getTargetTimespan net `div` getTargetSpacing net
+
 
 -- | Compare two blocks to get the best.
 chooseBest :: BlockNode -> BlockNode -> BlockNode
@@ -919,30 +921,33 @@ chooseBest b1 b2
     | nodeWork b1 > nodeWork b2 = b1
     | otherwise = b2
 
+
 -- | Get list of blocks for a block locator.
 blockLocatorNodes :: BlockHeaders m => BlockNode -> m [BlockNode]
 blockLocatorNodes best =
     reverse <$> go [] best 1
-  where
-    e1 = error "Could not get ancestor"
-    go loc bn n =
-        let loc' = bn : loc
-            n' =
-                if length loc' > 10
-                    then n * 2
-                    else 1
-         in if nodeHeight bn < n'
-                then do
-                    a <- fromMaybe e1 <$> getAncestor 0 bn
-                    return $ a : loc'
-                else do
-                    let h = nodeHeight bn - n'
-                    bn' <- fromMaybe e1 <$> getAncestor h bn
-                    go loc' bn' n'
+    where
+        e1 = error "Could not get ancestor"
+        go loc bn n =
+            let loc' = bn : loc
+                n' =
+                    if length loc' > 10
+                        then n * 2
+                        else 1
+             in if nodeHeight bn < n'
+                    then do
+                        a <- fromMaybe e1 <$> getAncestor 0 bn
+                        return $ a : loc'
+                    else do
+                        let h = nodeHeight bn - n'
+                        bn' <- fromMaybe e1 <$> getAncestor h bn
+                        go loc' bn' n'
+
 
 -- | Get block locator.
 blockLocator :: BlockHeaders m => BlockNode -> m BlockLocator
 blockLocator bn = map (headerHash . nodeHeader) <$> blockLocatorNodes bn
+
 
 -- | Become rich beyond your wildest dreams.
 mineBlock :: Network -> Word32 -> BlockHeader -> BlockHeader
@@ -953,6 +958,7 @@ mineBlock net seed h =
         , let j = h{bhNonce = i}
         , isValidPOW net j
         ]
+
 
 -- | Generate and append new blocks (mining). Only practical in regtest network.
 appendBlocks ::
@@ -965,16 +971,17 @@ appendBlocks ::
 appendBlocks _ _ _ 0 = []
 appendBlocks net seed bh i =
     bh' : appendBlocks net seed bh' (i - 1)
-  where
-    bh' =
-        mineBlock
-            net
-            seed
-            bh
-                { prevBlock = headerHash bh
-                , -- Just to make it different in every header
-                  merkleRoot = sha256 $ runPutS $ serialize seed
-                }
+    where
+        bh' =
+            mineBlock
+                net
+                seed
+                bh
+                    { prevBlock = headerHash bh
+                    , -- Just to make it different in every header
+                      merkleRoot = sha256 $ runPutS $ serialize seed
+                    }
+
 
 -- | Find the last common block ancestor between provided block headers.
 splitPoint :: BlockHeaders m => BlockNode -> BlockNode -> m BlockNode
@@ -983,20 +990,22 @@ splitPoint l r = do
     ll <- fromMaybe e <$> getAncestor h l
     lr <- fromMaybe e <$> getAncestor h r
     f ll lr
-  where
-    e = error "BUG: Could not get ancestor at lowest height"
-    f ll lr =
-        if ll == lr
-            then return lr
-            else do
-                let h = nodeHeight ll - 1
-                pl <- fromMaybe e <$> getAncestor h ll
-                pr <- fromMaybe e <$> getAncestor h lr
-                f pl pr
+    where
+        e = error "BUG: Could not get ancestor at lowest height"
+        f ll lr =
+            if ll == lr
+                then return lr
+                else do
+                    let h = nodeHeight ll - 1
+                    pl <- fromMaybe e <$> getAncestor h ll
+                    pr <- fromMaybe e <$> getAncestor h lr
+                    f pl pr
+
 
 -- | Generate the entire Genesis block for 'Network'.
 genesisBlock :: Network -> Block
 genesisBlock net = Block (getGenesisHeader net) [genesisTx]
+
 
 -- | Compute block subsidy at particular height.
 computeSubsidy :: Network -> BlockHeight -> Word64

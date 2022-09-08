@@ -1,16 +1,15 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-{- |
-Module      : Haskoin.Network.Message
-Copyright   : No rights reserved
-License     : MIT
-Maintainer  : jprupp@protonmail.ch
-Stability   : experimental
-Portability : POSIX
-
-Peer-to-peer network message serialization.
--}
+-- |
+--Module      : Haskoin.Network.Message
+--Copyright   : No rights reserved
+--License     : MIT
+--Maintainer  : jprupp@protonmail.ch
+--Stability   : experimental
+--Portability : POSIX
+--
+--Peer-to-peer network message serialization.
 module Haskoin.Network.Message (
     -- * Network Message
     Message (..),
@@ -22,13 +21,11 @@ module Haskoin.Network.Message (
 
 import Control.DeepSeq
 import Control.Monad (unless)
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Bytes.Get
 import Data.Bytes.Put
 import Data.Bytes.Serial
-import Data.Serialize (Serialize (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Haskoin.Block.Common
@@ -39,9 +36,9 @@ import Haskoin.Network.Bloom
 import Haskoin.Network.Common
 import Haskoin.Transaction.Common
 
-{- | Data type representing the header of a 'Message'. All messages sent between
- nodes contain a message header.
--}
+
+-- | Data type representing the header of a 'Message'. All messages sent between
+-- nodes contain a message header.
 data MessageHeader = MessageHeader
     { -- | magic bytes identify network
       headMagic :: !Word32
@@ -54,6 +51,7 @@ data MessageHeader = MessageHeader
     }
     deriving (Eq, Show, Generic, NFData)
 
+
 instance Serial MessageHeader where
     deserialize =
         MessageHeader
@@ -62,27 +60,30 @@ instance Serial MessageHeader where
             <*> getWord32le
             <*> deserialize
 
+
     serialize (MessageHeader m c l chk) = do
         putWord32be m
         serialize c
         putWord32le l
         serialize chk
 
+
 instance Binary MessageHeader where
     put = serialize
     get = deserialize
+
 
 instance Serialize MessageHeader where
     put = serialize
     get = deserialize
 
-{- | The 'Message' type is used to identify all the valid messages that can be
- sent between bitcoin peers. Only values of type 'Message' will be accepted
- by other bitcoin peers as bitcoin protocol messages need to be correctly
- serialized with message headers. Serializing a 'Message' value will
- include the 'MessageHeader' with the correct checksum value automatically.
- No need to add the 'MessageHeader' separately.
--}
+
+-- | The 'Message' type is used to identify all the valid messages that can be
+-- sent between bitcoin peers. Only values of type 'Message' will be accepted
+-- by other bitcoin peers as bitcoin protocol messages need to be correctly
+-- serialized with message headers. Serializing a 'Message' value will
+-- include the 'MessageHeader' with the correct checksum value automatically.
+-- No need to add the 'MessageHeader' separately.
 data Message
     = MVersion !Version
     | MVerAck
@@ -109,6 +110,7 @@ data Message
     | MOther !ByteString !ByteString
     deriving (Eq, Show, Generic, NFData)
 
+
 -- | Get 'MessageCommand' assocated with a message.
 msgType :: Message -> MessageCommand
 msgType (MVersion _) = MCVersion
@@ -134,6 +136,7 @@ msgType (MReject _) = MCReject
 msgType MSendHeaders = MCSendHeaders
 msgType MGetAddr = MCGetAddr
 msgType (MOther c _) = MCOther c
+
 
 -- | Deserializer for network messages.
 getMessage :: MonadGet m => Network -> m Message
@@ -184,6 +187,7 @@ getMessage net = do
                 fail $
                     "get: command " ++ show cmd
                         ++ " is expected to carry a payload"
+
 
 -- | Serializer for network messages.
 putMessage :: MonadPut m => Network -> Message -> m ()

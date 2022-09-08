@@ -22,10 +22,10 @@ dependencies:
   - array >= 0.5.4.0
   - base >=4.9 && <5
   - base16 >= 0.3.0.1
-  - binary >= 0.8.8
+  # - binary >= 0.8.8
   - bytes >= 0.17
   - bytestring >= 0.10.10.0
-  - cereal >= 0.5.8
+  # - cereal >= 0.5.8
   - containers >= 0.6.2.1
   - cryptonite >= 0.26
   - deepseq >= 1.4.4.0

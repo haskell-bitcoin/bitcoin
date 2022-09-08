@@ -2,16 +2,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{- |
-Module      : Haskoin.Script.Common
-Copyright   : No rights reserved
-License     : MIT
-Maintainer  : jprupp@protonmail.ch
-Stability   : experimental
-Portability : POSIX
-
-Common script-related functions and data types.
--}
+-- |
+--Module      : Haskoin.Script.Common
+--Copyright   : No rights reserved
+--License     : MIT
+--Maintainer  : jprupp@protonmail.ch
+--Stability   : experimental
+--Portability : POSIX
+--
+--Common script-related functions and data types.
 module Haskoin.Script.Common (
     -- * Scripts
     ScriptOp (..),
@@ -25,7 +24,6 @@ module Haskoin.Script.Common (
 
 import Control.DeepSeq
 import Control.Monad
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Bytes.Get
@@ -33,45 +31,39 @@ import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Either (fromRight)
 import Data.Hashable
-import Data.Serialize (Serialize (..))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 
-{- | Data type representing a transaction script. Scripts are defined as lists
- of script operators 'ScriptOp'. Scripts are used to:
 
- * Define the spending conditions in the output of a transaction.
- * Provide signatures in the input of a transaction (except SegWit).
-
- SigWit only: the segregated witness data structure, and not the input script,
- contains signatures and redeem script for pay-to-witness-script and
- pay-to-witness-public-key-hash transactions.
--}
+-- | Data type representing a transaction script. Scripts are defined as lists
+-- of script operators 'ScriptOp'. Scripts are used to:
+--
+-- * Define the spending conditions in the output of a transaction.
+-- * Provide signatures in the input of a transaction (except SegWit).
+--
+-- SigWit only: the segregated witness data structure, and not the input script,
+-- contains signatures and redeem script for pay-to-witness-script and
+-- pay-to-witness-public-key-hash transactions.
 newtype Script = Script
     { -- | script operators defining this script
       scriptOps :: [ScriptOp]
     }
     deriving (Eq, Show, Read, Generic, Hashable, NFData)
 
+
 instance Serial Script where
     deserialize =
         Script <$> getScriptOps
-      where
-        getScriptOps = do
-            empty <- isEmpty
-            if empty
-                then return []
-                else (:) <$> deserialize <*> getScriptOps
+        where
+            getScriptOps = do
+                empty <- isEmpty
+                if empty
+                    then return []
+                    else (:) <$> deserialize <*> getScriptOps
+
 
     serialize (Script ops) = forM_ ops serialize
 
-instance Binary Script where
-    put = serialize
-    get = deserialize
-
-instance Serialize Script where
-    put = serialize
-    get = deserialize
 
 -- | Data type representing the type of an OP_PUSHDATA opcode.
 data PushDataType
@@ -84,6 +76,7 @@ data PushDataType
     | -- | next four bytes contains the number of bytes to be pushed
       OPDATA4
     deriving (Show, Read, Eq, Generic, Hashable, NFData)
+
 
 -- | Data type representing an operator allowed inside a 'Script'.
 data ScriptOp
@@ -217,149 +210,151 @@ data ScriptOp
     | OP_INVALIDOPCODE !Word8
     deriving (Show, Read, Eq, Generic, Hashable, NFData)
 
+
 instance Serial ScriptOp where
     deserialize = go . fromIntegral =<< getWord8
-      where
-        go op
-            | op == 0x00 = return OP_0
-            | op <= 0x4b = do
-                payload <- getByteString (fromIntegral op)
-                return $ OP_PUSHDATA payload OPCODE
-            | op == 0x4c = do
-                len <- getWord8
-                payload <- getByteString (fromIntegral len)
-                return $ OP_PUSHDATA payload OPDATA1
-            | op == 0x4d = do
-                len <- getWord16le
-                payload <- getByteString (fromIntegral len)
-                return $ OP_PUSHDATA payload OPDATA2
-            | op == 0x4e = do
-                len <- getWord32le
-                payload <- getByteString (fromIntegral len)
-                return $ OP_PUSHDATA payload OPDATA4
-            | op == 0x4f = return OP_1NEGATE
-            | op == 0x50 = return OP_RESERVED
-            | op == 0x51 = return OP_1
-            | op == 0x52 = return OP_2
-            | op == 0x53 = return OP_3
-            | op == 0x54 = return OP_4
-            | op == 0x55 = return OP_5
-            | op == 0x56 = return OP_6
-            | op == 0x57 = return OP_7
-            | op == 0x58 = return OP_8
-            | op == 0x59 = return OP_9
-            | op == 0x5a = return OP_10
-            | op == 0x5b = return OP_11
-            | op == 0x5c = return OP_12
-            | op == 0x5d = return OP_13
-            | op == 0x5e = return OP_14
-            | op == 0x5f = return OP_15
-            | op == 0x60 = return OP_16
-            -- Flow control
-            | op == 0x61 = return OP_NOP
-            | op == 0x62 = return OP_VER -- reserved
-            | op == 0x63 = return OP_IF
-            | op == 0x64 = return OP_NOTIF
-            | op == 0x65 = return OP_VERIF -- reserved
-            | op == 0x66 = return OP_VERNOTIF -- reserved
-            | op == 0x67 = return OP_ELSE
-            | op == 0x68 = return OP_ENDIF
-            | op == 0x69 = return OP_VERIFY
-            | op == 0x6a = return OP_RETURN
-            -- Stack
-            | op == 0x6b = return OP_TOALTSTACK
-            | op == 0x6c = return OP_FROMALTSTACK
-            | op == 0x6d = return OP_2DROP
-            | op == 0x6e = return OP_2DUP
-            | op == 0x6f = return OP_3DUP
-            | op == 0x70 = return OP_2OVER
-            | op == 0x71 = return OP_2ROT
-            | op == 0x72 = return OP_2SWAP
-            | op == 0x73 = return OP_IFDUP
-            | op == 0x74 = return OP_DEPTH
-            | op == 0x75 = return OP_DROP
-            | op == 0x76 = return OP_DUP
-            | op == 0x77 = return OP_NIP
-            | op == 0x78 = return OP_OVER
-            | op == 0x79 = return OP_PICK
-            | op == 0x7a = return OP_ROLL
-            | op == 0x7b = return OP_ROT
-            | op == 0x7c = return OP_SWAP
-            | op == 0x7d = return OP_TUCK
-            -- Splice
-            | op == 0x7e = return OP_CAT
-            | op == 0x7f = return OP_SUBSTR
-            | op == 0x80 = return OP_LEFT
-            | op == 0x81 = return OP_RIGHT
-            | op == 0x82 = return OP_SIZE
-            -- Bitwise logic
-            | op == 0x83 = return OP_INVERT
-            | op == 0x84 = return OP_AND
-            | op == 0x85 = return OP_OR
-            | op == 0x86 = return OP_XOR
-            | op == 0x87 = return OP_EQUAL
-            | op == 0x88 = return OP_EQUALVERIFY
-            | op == 0x89 = return OP_RESERVED1
-            | op == 0x8a = return OP_RESERVED2
-            -- Arithmetic
-            | op == 0x8b = return OP_1ADD
-            | op == 0x8c = return OP_1SUB
-            | op == 0x8d = return OP_2MUL
-            | op == 0x8e = return OP_2DIV
-            | op == 0x8f = return OP_NEGATE
-            | op == 0x90 = return OP_ABS
-            | op == 0x91 = return OP_NOT
-            | op == 0x92 = return OP_0NOTEQUAL
-            | op == 0x93 = return OP_ADD
-            | op == 0x94 = return OP_SUB
-            | op == 0x95 = return OP_MUL
-            | op == 0x96 = return OP_DIV
-            | op == 0x97 = return OP_MOD
-            | op == 0x98 = return OP_LSHIFT
-            | op == 0x99 = return OP_RSHIFT
-            | op == 0x9a = return OP_BOOLAND
-            | op == 0x9b = return OP_BOOLOR
-            | op == 0x9c = return OP_NUMEQUAL
-            | op == 0x9d = return OP_NUMEQUALVERIFY
-            | op == 0x9e = return OP_NUMNOTEQUAL
-            | op == 0x9f = return OP_LESSTHAN
-            | op == 0xa0 = return OP_GREATERTHAN
-            | op == 0xa1 = return OP_LESSTHANOREQUAL
-            | op == 0xa2 = return OP_GREATERTHANOREQUAL
-            | op == 0xa3 = return OP_MIN
-            | op == 0xa4 = return OP_MAX
-            | op == 0xa5 = return OP_WITHIN
-            -- Crypto
-            | op == 0xa6 = return OP_RIPEMD160
-            | op == 0xa7 = return OP_SHA1
-            | op == 0xa8 = return OP_SHA256
-            | op == 0xa9 = return OP_HASH160
-            | op == 0xaa = return OP_HASH256
-            | op == 0xab = return OP_CODESEPARATOR
-            | op == 0xac = return OP_CHECKSIG
-            | op == 0xad = return OP_CHECKSIGVERIFY
-            | op == 0xae = return OP_CHECKMULTISIG
-            | op == 0xaf = return OP_CHECKMULTISIGVERIFY
-            -- More NOPs
-            | op == 0xb0 = return OP_NOP1
-            | op == 0xb1 = return OP_CHECKLOCKTIMEVERIFY
-            | op == 0xb2 = return OP_CHECKSEQUENCEVERIFY
-            | op == 0xb3 = return OP_NOP4
-            | op == 0xb4 = return OP_NOP5
-            | op == 0xb5 = return OP_NOP6
-            | op == 0xb6 = return OP_NOP7
-            | op == 0xb7 = return OP_NOP8
-            | op == 0xb8 = return OP_NOP9
-            | op == 0xb9 = return OP_NOP10
-            -- Bitcoin Cash Nov 2018 hard fork
-            | op == 0xba = return OP_CHECKDATASIG
-            | op == 0xbb = return OP_CHECKDATASIGVERIFY
-            -- Bitcoin Cash May 2020 hard fork
-            | op == 0xbc = return OP_REVERSEBYTES
-            -- Constants
-            | op == 0xfd = return OP_PUBKEYHASH
-            | op == 0xfe = return OP_PUBKEY
-            | otherwise = return $ OP_INVALIDOPCODE op
+        where
+            go op
+                | op == 0x00 = return OP_0
+                | op <= 0x4b = do
+                    payload <- getByteString (fromIntegral op)
+                    return $ OP_PUSHDATA payload OPCODE
+                | op == 0x4c = do
+                    len <- getWord8
+                    payload <- getByteString (fromIntegral len)
+                    return $ OP_PUSHDATA payload OPDATA1
+                | op == 0x4d = do
+                    len <- getWord16le
+                    payload <- getByteString (fromIntegral len)
+                    return $ OP_PUSHDATA payload OPDATA2
+                | op == 0x4e = do
+                    len <- getWord32le
+                    payload <- getByteString (fromIntegral len)
+                    return $ OP_PUSHDATA payload OPDATA4
+                | op == 0x4f = return OP_1NEGATE
+                | op == 0x50 = return OP_RESERVED
+                | op == 0x51 = return OP_1
+                | op == 0x52 = return OP_2
+                | op == 0x53 = return OP_3
+                | op == 0x54 = return OP_4
+                | op == 0x55 = return OP_5
+                | op == 0x56 = return OP_6
+                | op == 0x57 = return OP_7
+                | op == 0x58 = return OP_8
+                | op == 0x59 = return OP_9
+                | op == 0x5a = return OP_10
+                | op == 0x5b = return OP_11
+                | op == 0x5c = return OP_12
+                | op == 0x5d = return OP_13
+                | op == 0x5e = return OP_14
+                | op == 0x5f = return OP_15
+                | op == 0x60 = return OP_16
+                -- Flow control
+                | op == 0x61 = return OP_NOP
+                | op == 0x62 = return OP_VER -- reserved
+                | op == 0x63 = return OP_IF
+                | op == 0x64 = return OP_NOTIF
+                | op == 0x65 = return OP_VERIF -- reserved
+                | op == 0x66 = return OP_VERNOTIF -- reserved
+                | op == 0x67 = return OP_ELSE
+                | op == 0x68 = return OP_ENDIF
+                | op == 0x69 = return OP_VERIFY
+                | op == 0x6a = return OP_RETURN
+                -- Stack
+                | op == 0x6b = return OP_TOALTSTACK
+                | op == 0x6c = return OP_FROMALTSTACK
+                | op == 0x6d = return OP_2DROP
+                | op == 0x6e = return OP_2DUP
+                | op == 0x6f = return OP_3DUP
+                | op == 0x70 = return OP_2OVER
+                | op == 0x71 = return OP_2ROT
+                | op == 0x72 = return OP_2SWAP
+                | op == 0x73 = return OP_IFDUP
+                | op == 0x74 = return OP_DEPTH
+                | op == 0x75 = return OP_DROP
+                | op == 0x76 = return OP_DUP
+                | op == 0x77 = return OP_NIP
+                | op == 0x78 = return OP_OVER
+                | op == 0x79 = return OP_PICK
+                | op == 0x7a = return OP_ROLL
+                | op == 0x7b = return OP_ROT
+                | op == 0x7c = return OP_SWAP
+                | op == 0x7d = return OP_TUCK
+                -- Splice
+                | op == 0x7e = return OP_CAT
+                | op == 0x7f = return OP_SUBSTR
+                | op == 0x80 = return OP_LEFT
+                | op == 0x81 = return OP_RIGHT
+                | op == 0x82 = return OP_SIZE
+                -- Bitwise logic
+                | op == 0x83 = return OP_INVERT
+                | op == 0x84 = return OP_AND
+                | op == 0x85 = return OP_OR
+                | op == 0x86 = return OP_XOR
+                | op == 0x87 = return OP_EQUAL
+                | op == 0x88 = return OP_EQUALVERIFY
+                | op == 0x89 = return OP_RESERVED1
+                | op == 0x8a = return OP_RESERVED2
+                -- Arithmetic
+                | op == 0x8b = return OP_1ADD
+                | op == 0x8c = return OP_1SUB
+                | op == 0x8d = return OP_2MUL
+                | op == 0x8e = return OP_2DIV
+                | op == 0x8f = return OP_NEGATE
+                | op == 0x90 = return OP_ABS
+                | op == 0x91 = return OP_NOT
+                | op == 0x92 = return OP_0NOTEQUAL
+                | op == 0x93 = return OP_ADD
+                | op == 0x94 = return OP_SUB
+                | op == 0x95 = return OP_MUL
+                | op == 0x96 = return OP_DIV
+                | op == 0x97 = return OP_MOD
+                | op == 0x98 = return OP_LSHIFT
+                | op == 0x99 = return OP_RSHIFT
+                | op == 0x9a = return OP_BOOLAND
+                | op == 0x9b = return OP_BOOLOR
+                | op == 0x9c = return OP_NUMEQUAL
+                | op == 0x9d = return OP_NUMEQUALVERIFY
+                | op == 0x9e = return OP_NUMNOTEQUAL
+                | op == 0x9f = return OP_LESSTHAN
+                | op == 0xa0 = return OP_GREATERTHAN
+                | op == 0xa1 = return OP_LESSTHANOREQUAL
+                | op == 0xa2 = return OP_GREATERTHANOREQUAL
+                | op == 0xa3 = return OP_MIN
+                | op == 0xa4 = return OP_MAX
+                | op == 0xa5 = return OP_WITHIN
+                -- Crypto
+                | op == 0xa6 = return OP_RIPEMD160
+                | op == 0xa7 = return OP_SHA1
+                | op == 0xa8 = return OP_SHA256
+                | op == 0xa9 = return OP_HASH160
+                | op == 0xaa = return OP_HASH256
+                | op == 0xab = return OP_CODESEPARATOR
+                | op == 0xac = return OP_CHECKSIG
+                | op == 0xad = return OP_CHECKSIGVERIFY
+                | op == 0xae = return OP_CHECKMULTISIG
+                | op == 0xaf = return OP_CHECKMULTISIGVERIFY
+                -- More NOPs
+                | op == 0xb0 = return OP_NOP1
+                | op == 0xb1 = return OP_CHECKLOCKTIMEVERIFY
+                | op == 0xb2 = return OP_CHECKSEQUENCEVERIFY
+                | op == 0xb3 = return OP_NOP4
+                | op == 0xb4 = return OP_NOP5
+                | op == 0xb5 = return OP_NOP6
+                | op == 0xb6 = return OP_NOP7
+                | op == 0xb7 = return OP_NOP8
+                | op == 0xb8 = return OP_NOP9
+                | op == 0xb9 = return OP_NOP10
+                -- Bitcoin Cash Nov 2018 hard fork
+                | op == 0xba = return OP_CHECKDATASIG
+                | op == 0xbb = return OP_CHECKDATASIGVERIFY
+                -- Bitcoin Cash May 2020 hard fork
+                | op == 0xbc = return OP_REVERSEBYTES
+                -- Constants
+                | op == 0xfd = return OP_PUBKEYHASH
+                | op == 0xfe = return OP_PUBKEY
+                | otherwise = return $ OP_INVALIDOPCODE op
+
 
     serialize op = case op of
         (OP_PUSHDATA payload optype) -> do
@@ -513,13 +508,6 @@ instance Serial ScriptOp where
         -- Bitcoin Cash May 2020 hard fork
         OP_REVERSEBYTES -> putWord8 0xbc
 
-instance Binary ScriptOp where
-    put = serialize
-    get = deserialize
-
-instance Serialize ScriptOp where
-    put = serialize
-    get = deserialize
 
 -- | Check whether opcode is only data.
 isPushOp :: ScriptOp -> Bool
@@ -545,6 +533,7 @@ isPushOp op = case op of
     OP_16 -> True
     _ -> False
 
+
 -- | Optimally encode data using one of the 4 types of data pushing opcodes.
 opPushData :: ByteString -> ScriptOp
 opPushData bs
@@ -553,29 +542,30 @@ opPushData bs
     | len <= 0xffff = OP_PUSHDATA bs OPDATA2
     | len <= 0xffffffff = OP_PUSHDATA bs OPDATA4
     | otherwise = error "opPushData: payload size too big"
-  where
-    len = B.length bs
+    where
+        len = B.length bs
+
 
 -- | Transforms integers @[1 .. 16]@ to 'ScriptOp' @[OP_1 .. OP_16]@.
 intToScriptOp :: Int -> ScriptOp
 intToScriptOp i
     | i `elem` [1 .. 16] = op
     | otherwise = err
-  where
-    op =
-        fromRight err
-            . runGetS deserialize
-            . B.singleton
-            . fromIntegral
-            $ i + 0x50
-    err = error $ "intToScriptOp: Invalid integer " ++ show i
+    where
+        op =
+            fromRight err
+                . runGetS deserialize
+                . B.singleton
+                . fromIntegral
+                $ i + 0x50
+        err = error $ "intToScriptOp: Invalid integer " ++ show i
 
-{- | Decode 'ScriptOp' @[OP_1 .. OP_16]@ to integers @[1 .. 16]@. This functions
- fails for other values of 'ScriptOp'
--}
+
+-- | Decode 'ScriptOp' @[OP_1 .. OP_16]@ to integers @[1 .. 16]@. This functions
+-- fails for other values of 'ScriptOp'
 scriptOpToInt :: ScriptOp -> Either String Int
 scriptOpToInt s
     | res `elem` [1 .. 16] = return res
     | otherwise = Left $ "scriptOpToInt: invalid opcode " ++ show s
-  where
-    res = fromIntegral (B.head $ runPutS $ serialize s) - 0x50
+    where
+        res = fromIntegral (B.head $ runPutS $ serialize s) - 0x50

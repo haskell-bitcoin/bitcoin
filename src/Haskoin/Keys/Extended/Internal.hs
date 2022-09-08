@@ -9,15 +9,12 @@ module Haskoin.Keys.Extended.Internal (
 
 import Control.DeepSeq (NFData)
 import Control.Monad ((>=>))
-import Data.Binary (Binary (..))
-import Data.Bytes.Get (getWord32be)
-import Data.Bytes.Put (putWord32be)
+import Data.Bytes.Get (getWord32be, runGetS)
+import Data.Bytes.Put (putWord32be, runPutS)
 import Data.Bytes.Serial (Serial (..))
 import Data.Either (fromRight)
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
-import qualified Data.Serialize as S
 import Data.String (IsString (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -34,28 +31,28 @@ newtype Fingerprint = Fingerprint {unFingerprint :: Word32}
 
 
 fingerprintToText :: Fingerprint -> Text
-fingerprintToText = encodeHex . S.encode
+fingerprintToText = encodeHex . runPutS . serialize
 
 
 textToFingerprint :: Text -> Either String Fingerprint
-textToFingerprint = maybe (Left "Fingerprint: invalid hex") Right . decodeHex >=> S.decode
+textToFingerprint = maybe (Left "Fingerprint: invalid hex") Right . decodeHex >=> runGetS deserialize
 
 
 instance Show Fingerprint where
-    show = show . Text.unpack . encodeHex . S.encode
+    show = show . Text.unpack . encodeHex . runPutS . serialize
 
 
 instance Read Fingerprint where
     readPrec =
         readPrec
             >>= maybe (fail "Fingerprint: invalid hex") pure . decodeHex
-            >>= either (fail . ("Fingerprint: " <>)) pure . S.decode
+            >>= either (fail . ("Fingerprint: " <>)) pure . runGetS deserialize
 
 
 instance IsString Fingerprint where
     fromString =
         fromRight decodeError
-            . S.decode
+            . runGetS deserialize
             . fromMaybe hexError
             . decodeHex
             . Text.pack
@@ -67,13 +64,3 @@ instance IsString Fingerprint where
 instance Serial Fingerprint where
     serialize = putWord32be . unFingerprint
     deserialize = Fingerprint <$> getWord32be
-
-
-instance Binary Fingerprint where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize Fingerprint where
-    put = serialize
-    get = deserialize

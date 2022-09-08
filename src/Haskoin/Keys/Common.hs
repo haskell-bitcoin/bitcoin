@@ -38,7 +38,6 @@ module Haskoin.Keys.Common (
 import Control.DeepSeq
 import Control.Monad (guard, mzero, (<=<))
 import Crypto.Secp256k1
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (char7)
@@ -47,7 +46,6 @@ import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Hashable
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
 import Data.String (IsString, fromString)
 import Data.String.Conversions (cs)
 import GHC.Generics (Generic)

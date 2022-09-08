@@ -1,16 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{- |
-Module      : Haskoin.Crypto.Signature
-Copyright   : No rights reserved
-License     : MIT
-Maintainer  : jprupp@protonmail.ch
-Stability   : experimental
-Portability : POSIX
-
-ECDSA signatures using secp256k1 curve. Uses functions from upstream secp256k1
-library.
--}
+-- |
+--Module      : Haskoin.Crypto.Signature
+--Copyright   : No rights reserved
+--License     : MIT
+--Maintainer  : jprupp@protonmail.ch
+--Stability   : experimental
+--Portability : POSIX
+--
+--ECDSA signatures using secp256k1 curve. Uses functions from upstream secp256k1
+--library.
 module Haskoin.Crypto.Signature (
     -- * Signatures
     putSig,
@@ -24,33 +23,35 @@ module Haskoin.Crypto.Signature (
 
 import Control.Monad (guard, unless, when)
 import Crypto.Secp256k1
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Bytes.Get
 import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Maybe (fromMaybe, isNothing)
-import Data.Serialize (Serialize (..))
 import Haskoin.Crypto.Hash
 import Numeric (showHex)
+
 
 -- | Convert 256-bit hash into a 'Msg' for signing or verification.
 hashToMsg :: Hash256 -> Msg
 hashToMsg =
     fromMaybe e . msg . runPutS . serialize
-  where
-    e = error "Could not convert 32-byte hash to secp256k1 message"
+    where
+        e = error "Could not convert 32-byte hash to secp256k1 message"
+
 
 -- | Sign a 256-bit hash using secp256k1 elliptic curve.
 signHash :: SecKey -> Hash256 -> Sig
 signHash k = signMsg k . hashToMsg
 
+
 -- | Verify an ECDSA signature for a 256-bit hash.
 verifyHashSig :: Hash256 -> Sig -> PubKey -> Bool
 verifyHashSig h s p = verifySig p norm (hashToMsg h)
-  where
-    norm = fromMaybe s (normalizeSig s)
+    where
+        norm = fromMaybe s (normalizeSig s)
+
 
 -- | Deserialize an ECDSA signature as commonly encoded in Bitcoin.
 getSig :: MonadGet m => m Sig
@@ -71,13 +72,16 @@ getSig = do
         Just s -> return s
         Nothing -> fail "Invalid signature"
 
+
 -- | Serialize an ECDSA signature for Bitcoin use.
 putSig :: MonadPut m => Sig -> m ()
 putSig s = putByteString $ exportSig s
 
+
 -- | Is canonical half order.
 isCanonicalHalfOrder :: Sig -> Bool
 isCanonicalHalfOrder = isNothing . normalizeSig
+
 
 -- | Decode signature strictly.
 decodeStrictSig :: ByteString -> Maybe Sig

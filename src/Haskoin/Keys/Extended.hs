@@ -103,7 +103,6 @@ import Control.DeepSeq
 import Control.Exception (Exception, throw)
 import Control.Monad (guard, mzero, unless, (<=<))
 import Crypto.Secp256k1
-import Data.Binary (Binary (get, put))
 import Data.Bits (clearBit, setBit, testBit)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -115,8 +114,6 @@ import Data.Hashable
 import Data.List (foldl')
 import Data.List.Split (splitOn)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
-import qualified Data.Serialize as S
 import Data.String (IsString, fromString)
 import Data.String.Conversions (cs)
 import qualified Data.Text as Text

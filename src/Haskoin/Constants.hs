@@ -22,14 +22,12 @@ module Haskoin.Constants (
 ) where
 
 import Control.DeepSeq
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import Data.Bytes.Get
 import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.List
 import Data.Maybe
-import Data.Serialize (Serialize (..))
 import Data.String
 import Data.Text (Text)
 import Data.Word (Word32, Word64, Word8)

@@ -51,7 +51,6 @@ import Control.Applicative
 import Control.Arrow (second)
 import Control.DeepSeq
 import Control.Monad
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Bytes.Get
@@ -59,7 +58,6 @@ import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Hashable
 import Data.Maybe
-import Data.Serialize (Serialize (..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)

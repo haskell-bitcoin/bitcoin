@@ -1,7 +1,7 @@
 name: bitcoin
 version: 0.21.2
-synopsis: Bitcoin & Bitcoin Cash library for Haskell
-description: Please see the README on GitHub at <https://github.com/haskoin/haskoin-core#readme>
+synopsis: Bitcoin library for Haskell
+description: Please see the README on GitHub at <https://github.com/haskell-bitcoin/bitcoin#readme>
 category: Bitcoin, Finance, Network
 author:
   - Philippe Laprade
@@ -11,9 +11,9 @@ author:
 maintainer: keagan.mcclelland@gmail.com
 license: MIT
 license-file: LICENSE
-homepage: http://github.com/haskoin/haskoin#readme
-git: git://github.com/haskoin/haskoin.git
-bug-reports: http://github.com/haskoin/haskoin/issues
+homepage: http://github.com/haskell-bitcoin/bitcoin#readme
+git: git://github.com/haskell-bitcoin/bitcoin.git
+bug-reports: http://github.com/haskell-bitcoin/bitcoin/issues
 extra-source-files:
   - data/*.json
   - README.md
@@ -22,10 +22,8 @@ dependencies:
   - array >= 0.5.4.0
   - base >=4.9 && <5
   - base16 >= 0.3.0.1
-  # - binary >= 0.8.8
   - bytes >= 0.17
   - bytestring >= 0.10.10.0
-  # - cereal >= 0.5.8
   - containers >= 0.6.2.1
   - cryptonite >= 0.26
   - deepseq >= 1.4.4.0

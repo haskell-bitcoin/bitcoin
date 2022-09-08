@@ -6,11 +6,11 @@ cabal-version: 1.12
 
 name:           bitcoin
 version:        0.21.2
-synopsis:       Bitcoin & Bitcoin Cash library for Haskell
-description:    Please see the README on GitHub at <https://github.com/haskoin/haskoin-core#readme>
+synopsis:       Bitcoin library for Haskell
+description:    Please see the README on GitHub at <https://github.com/haskell-bitcoin/bitcoin#readme>
 category:       Bitcoin, Finance, Network
-homepage:       http://github.com/haskoin/haskoin#readme
-bug-reports:    http://github.com/haskoin/haskoin/issues
+homepage:       http://github.com/haskell-bitcoin/bitcoin#readme
+bug-reports:    http://github.com/haskell-bitcoin/bitcoin/issues
 author:         Philippe Laprade,
                 Jean-Pierre Rupp,
                 Matthew Wraith,
@@ -39,7 +39,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: git://github.com/haskoin/haskoin.git
+  location: git://github.com/haskell-bitcoin/bitcoin.git
 
 library
   exposed-modules:

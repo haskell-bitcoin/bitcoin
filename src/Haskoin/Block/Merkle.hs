@@ -36,7 +36,6 @@ module Haskoin.Block.Merkle (
 
 import Control.DeepSeq
 import Control.Monad (forM_, replicateM, when)
-import Data.Binary (Binary (..))
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.Bytes.Get
@@ -45,7 +44,6 @@ import Data.Bytes.Serial
 import Data.Either (isRight)
 import Data.Hashable
 import Data.Maybe
-import Data.Serialize (Serialize (..))
 import Data.Word (Word32, Word8)
 import GHC.Generics
 import Haskoin.Block.Common

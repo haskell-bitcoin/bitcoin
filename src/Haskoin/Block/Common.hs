@@ -32,7 +32,6 @@ module Haskoin.Block.Common (
 
 import Control.DeepSeq
 import Control.Monad (forM_, liftM2, mzero, replicateM, (<=<))
-import Data.Binary (Binary (..))
 import Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as B
 import Data.ByteString.Builder (char7)
@@ -52,7 +51,6 @@ import Data.Bytes.Put (
 import Data.Bytes.Serial (Serial (..))
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
 import Data.String (IsString, fromString)
 import Data.String.Conversions (cs)
 import Data.Text (Text)

@@ -85,7 +85,6 @@ import Control.Monad.Trans.State.Strict as State (
     gets,
     modify,
  )
-import Data.Binary (Binary (..))
 import Data.Bits (shiftL, shiftR, (.&.))
 import qualified Data.ByteString as B
 import Data.ByteString.Short (
@@ -102,7 +101,6 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Hashable
 import Data.List (sort, sortBy)
 import Data.Maybe (fromMaybe, listToMaybe)
-import Data.Serialize (Serialize (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)

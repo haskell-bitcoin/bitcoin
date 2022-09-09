@@ -137,16 +137,6 @@ instance Serial Address where
                         <> encodeHex (B.singleton b)
 
 
-instance Serialize Address where
-    put = serialize
-    get = deserialize
-
-
-instance Binary Address where
-    put = serialize
-    get = deserialize
-
-
 -- | 'Address' pays to a public key hash.
 isPubKeyAddress :: Address -> Bool
 isPubKeyAddress PubKeyAddress{} = True

@@ -96,16 +96,6 @@ instance Serial PubKeyI where
     serialize pk = putByteString $ exportPubKey (pubKeyCompressed pk) (pubKeyPoint pk)
 
 
-instance Serialize PubKeyI where
-    put = serialize
-    get = deserialize
-
-
-instance Binary PubKeyI where
-    put = serialize
-    get = deserialize
-
-
 -- | Wrap a public key from secp256k1 library adding information about compression.
 wrapPubKey :: Bool -> PubKey -> PubKeyI
 wrapPubKey c p = PubKeyI p c

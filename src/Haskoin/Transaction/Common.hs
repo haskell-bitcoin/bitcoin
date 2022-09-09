@@ -40,7 +40,6 @@ import Control.Monad (
     when,
     (<=<),
  )
-import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Builder (char7)
@@ -50,7 +49,6 @@ import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
 import Data.String (IsString, fromString)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
@@ -65,16 +63,6 @@ import Text.Read as R
 -- | Transaction id: hash of transaction excluding witness data.
 newtype TxHash = TxHash {getTxHash :: Hash256}
     deriving (Eq, Ord, Generic, Hashable, Serial, NFData)
-
-
-instance Serialize TxHash where
-    put = serialize
-    get = deserialize
-
-
-instance Binary TxHash where
-    put = serialize
-    get = deserialize
 
 
 instance Show TxHash where
@@ -163,16 +151,6 @@ instance Serial Tx where
     serialize tx
         | null (txWitness tx) = putLegacyTx tx
         | otherwise = putWitnessTx tx
-
-
-instance Binary Tx where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize Tx where
-    put = serialize
-    get = deserialize
 
 
 putInOut :: MonadPut m => Tx -> m ()
@@ -297,16 +275,6 @@ instance Serial TxIn where
         putWord32le q
 
 
-instance Binary TxIn where
-    get = deserialize
-    put = serialize
-
-
-instance Serialize TxIn where
-    get = deserialize
-    put = serialize
-
-
 -- | Data type representing a transaction output.
 data TxOut = TxOut
     { -- | value of output is satoshi
@@ -330,16 +298,6 @@ instance Serial TxOut where
         putByteString s
 
 
-instance Binary TxOut where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize TxOut where
-    put = serialize
-    get = deserialize
-
-
 -- | The 'OutPoint' refers to a transaction output being spent.
 data OutPoint = OutPoint
     { -- | hash of previous transaction
@@ -355,16 +313,6 @@ instance Serial OutPoint where
         (h, i) <- liftM2 (,) deserialize getWord32le
         return $ OutPoint h i
     serialize (OutPoint h i) = serialize h >> putWord32le i
-
-
-instance Binary OutPoint where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize OutPoint where
-    put = serialize
-    get = deserialize
 
 
 -- | Outpoint used in coinbase transactions.

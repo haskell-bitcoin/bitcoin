@@ -91,31 +91,11 @@ instance Serial Block where
         forM_ txs serialize
 
 
-instance Serialize Block where
-    get = deserialize
-    put = serialize
-
-
-instance Binary Block where
-    get = deserialize
-    put = serialize
-
-
 -- | Block header hash. To be serialized reversed for display purposes.
 newtype BlockHash = BlockHash
     { getBlockHash :: Hash256
     }
     deriving (Eq, Ord, Generic, Hashable, Serial, NFData)
-
-
-instance Serialize BlockHash where
-    put = serialize
-    get = deserialize
-
-
-instance Binary BlockHash where
-    put = serialize
-    get = deserialize
 
 
 instance Show BlockHash where
@@ -199,16 +179,6 @@ instance Serial BlockHeader where
         putWord32le n
 
 
-instance Binary BlockHeader where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize BlockHeader where
-    put = serialize
-    get = deserialize
-
-
 -- | Compute hash of 'BlockHeader'.
 headerHash :: BlockHeader -> BlockHash
 headerHash = BlockHash . doubleSHA256 . runPutS . serialize
@@ -250,11 +220,6 @@ instance Serial GetBlocks where
     serialize (GetBlocks v xs h) = putGetBlockMsg v xs h
 
 
-instance Serialize GetBlocks where
-    put = serialize
-    get = deserialize
-
-
 putGetBlockMsg :: MonadPut m => Word32 -> BlockLocator -> BlockHash -> m ()
 putGetBlockMsg v xs h = do
     putWord32le v
@@ -289,16 +254,6 @@ instance Serial GetHeaders where
     serialize (GetHeaders v xs h) = putGetBlockMsg v xs h
 
 
-instance Serialize GetHeaders where
-    put = serialize
-    get = deserialize
-
-
-instance Binary GetHeaders where
-    put = serialize
-    get = deserialize
-
-
 -- | 'BlockHeader' type with a transaction count as 'VarInt'
 type BlockHeaderCount = (BlockHeader, VarInt)
 
@@ -320,16 +275,6 @@ instance Serial Headers where
     serialize (Headers xs) = do
         putVarInt $ length xs
         forM_ xs $ \(a, b) -> serialize a >> serialize b
-
-
-instance Serialize Headers where
-    put = serialize
-    get = deserialize
-
-
-instance Binary Headers where
-    put = serialize
-    get = deserialize
 
 
 -- | Decode the compact number used in the difficulty target of a block.

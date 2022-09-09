@@ -243,7 +243,7 @@ join512 (a, b) =
 
 -- | Initialize tagged hash specified in BIP340
 --
---@since 0.21.0
+-- @since 0.21.0
 initTaggedHash ::
     -- | Hash tag
     ByteString ->

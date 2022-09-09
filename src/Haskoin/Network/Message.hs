@@ -68,16 +68,6 @@ instance Serial MessageHeader where
         serialize chk
 
 
-instance Binary MessageHeader where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize MessageHeader where
-    put = serialize
-    get = deserialize
-
-
 -- | The 'Message' type is used to identify all the valid messages that can be
 -- sent between bitcoin peers. Only values of type 'Message' will be accepted
 -- by other bitcoin peers as bitcoin protocol messages need to be correctly

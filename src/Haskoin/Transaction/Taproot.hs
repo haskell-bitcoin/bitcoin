@@ -39,19 +39,17 @@ import Crypto.Hash (
     hashUpdate,
     hashUpdates,
  )
-import Data.Binary (Binary (..))
 import Data.Bits ((.&.), (.|.))
 import Data.Bool (bool)
 import qualified Data.ByteArray as BA
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Bytes.Get (getBytes, runGetS)
+import Data.Bytes.Get (getByteString, getBytes, getWord8, runGetS)
 import Data.Bytes.Put (putByteString, runPutS)
 import Data.Bytes.Serial (Serial (..), deserialize, serialize)
 import Data.Bytes.VarInt (VarInt (VarInt))
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Serialize (Serialize, get, getByteString, getWord8, put)
 import Data.Word (Word8)
 import Haskoin.Crypto (PubKey, initTaggedHash, tweak, tweakAddPubKey)
 import Haskoin.Keys.Common (PubKeyI (PubKeyI), pubKeyPoint)
@@ -65,7 +63,7 @@ import Haskoin.Util (decodeHex, eitherToMaybe, encodeHex)
 --equality test only checks the x-coordinate.  An x-only pubkey serializes to 32
 --bytes.
 --
---@since 0.21.0
+-- @since 0.21.0
 newtype XOnlyPubKey = XOnlyPubKey {xOnlyPubKey :: PubKey}
     deriving (Show)
 
@@ -88,16 +86,6 @@ instance Serial XOnlyPubKey where
             =<< getBytes 32
 
 
-instance Serialize XOnlyPubKey where
-    put = serialize
-    get = deserialize
-
-
-instance Binary XOnlyPubKey where
-    put = serialize
-    get = deserialize
-
-
 -- | @since 0.21.0
 type TapLeafVersion = Word8
 
@@ -106,7 +94,7 @@ type TapLeafVersion = Word8
 --subset of the leaves are known.  Note that the tree is invariant under swapping
 --branches at an internal node.
 --
---@since 0.21.0
+-- @since 0.21.0
 data MAST
     = MASTBranch MAST MAST
     | MASTLeaf TapLeafVersion Script
@@ -117,7 +105,7 @@ data MAST
 -- | Get the inclusion proofs for the leaves in the tree.  The proof is ordered
 --leaf-to-root.
 --
---@since 0.21.0
+-- @since 0.21.0
 getMerkleProofs :: MAST -> [(TapLeafVersion, Script, [Digest SHA256])]
 getMerkleProofs = getProofs mempty
     where
@@ -133,7 +121,7 @@ getMerkleProofs = getProofs mempty
 
 -- | Calculate the root hash for this tree.
 --
---@since 0.21.0
+-- @since 0.21.0
 mastCommitment :: MAST -> Digest SHA256
 mastCommitment = \case
     MASTBranch leftBranch rightBranch ->
@@ -167,7 +155,7 @@ leafHash leafVersion leafScript =
 
 -- | Representation of a full taproot output.
 --
---@since 0.21.0
+-- @since 0.21.0
 data TaprootOutput = TaprootOutput
     { taprootInternalKey :: PubKey
     , taprootMAST :: Maybe MAST
@@ -196,14 +184,14 @@ taprootCommitment internalKey merkleRoot =
 
 -- | Generate the output script for a taproot output
 --
---@since 0.21.0
+-- @since 0.21.0
 taprootScriptOutput :: TaprootOutput -> ScriptOutput
 taprootScriptOutput = PayWitness 0x01 . runPutS . serialize . XOnlyPubKey . taprootOutputKey
 
 
 -- | Comprehension of taproot witness data
 --
---@since 0.21.0
+-- @since 0.21.0
 data TaprootWitness
     = -- | Signature
       KeyPathSpend ByteString
@@ -227,7 +215,7 @@ data ScriptPathData = ScriptPathData
 
 -- | Try to interpret a 'WitnessStack' as taproot witness data.
 --
---@since 0.21.0
+-- @since 0.21.0
 viewTaprootWitness :: WitnessStack -> Maybe TaprootWitness
 viewTaprootWitness witnessStack = case reverse witnessStack of
     [sig] -> Just $ KeyPathSpend sig
@@ -261,7 +249,7 @@ viewTaprootWitness witnessStack = case reverse witnessStack of
 
 -- | Transform the high-level representation of taproot witness data into a witness stack
 --
---@since 0.21.0
+-- @since 0.21.0
 encodeTaprootWitness :: TaprootWitness -> WitnessStack
 encodeTaprootWitness = \case
     KeyPathSpend signature -> pure signature
@@ -281,7 +269,7 @@ encodeTaprootWitness = \case
 
 -- | Verify that the script path spend is valid, except for script execution.
 --
---@since 0.21.0
+-- @since 0.21.0
 verifyScriptPathData ::
     -- | Output key
     PubKey ->

@@ -185,16 +185,6 @@ instance Serial XPrvKey where
             <*> getPadPrvKey
 
 
-instance Binary XPrvKey where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize XPrvKey where
-    put = serialize
-    get = deserialize
-
-
 -- | Data type representing an extended BIP32 public key.
 data XPubKey = XPubKey
     { -- | depth in the tree
@@ -224,16 +214,6 @@ instance Serial XPubKey where
             <*> getWord32be
             <*> deserialize
             <*> (pubKeyPoint <$> deserialize)
-
-
-instance Serialize XPubKey where
-    put = serialize
-    get = deserialize
-
-
-instance Binary XPubKey where
-    put = serialize
-    get = deserialize
 
 
 -- | Build a BIP32 compatible extended private key from a bytestring. This will
@@ -658,16 +638,6 @@ instance Serial DerivPath where
     serialize = putList putWord32be . pathToList
 
 
-instance Serialize DerivPath where
-    put = serialize
-    get = deserialize
-
-
-instance Binary DerivPath where
-    put = serialize
-    get = deserialize
-
-
 instance Serial HardPath where
     deserialize =
         maybe
@@ -679,16 +649,6 @@ instance Serial HardPath where
     serialize = putList putWord32be . pathToList
 
 
-instance Serialize HardPath where
-    put = serialize
-    get = deserialize
-
-
-instance Binary HardPath where
-    put = serialize
-    get = deserialize
-
-
 instance Serial SoftPath where
     deserialize =
         maybe
@@ -698,16 +658,6 @@ instance Serial SoftPath where
             . listToPath
             =<< getList getWord32be
     serialize = putList putWord32be . pathToList
-
-
-instance Serialize SoftPath where
-    put = serialize
-    get = deserialize
-
-
-instance Binary SoftPath where
-    put = serialize
-    get = deserialize
 
 
 -- | Get a list of derivation indices from a derivation path.
@@ -1067,14 +1017,14 @@ getPadPrvKey = do
     pad <- getWord8
     unless (pad == 0x00) $ fail "Private key must be padded with 0x00"
     bs <- getByteString 32
-    case runGetS S.get bs of
-        Left e -> fail e
-        Right x -> return x
+    case secKey bs of
+        Nothing -> fail "Invalid Secret Key"
+        Just x -> return x
 
 
 -- | Serialize HDW-specific private key.
 putPadPrvKey :: MonadPut m => SecKey -> m ()
-putPadPrvKey p = putWord8 0x00 >> putByteString (runPutS (S.put p))
+putPadPrvKey p = putWord8 0x00 >> putByteString (getSecKey p)
 
 
 bsPadPrvKey :: SecKey -> ByteString

@@ -96,16 +96,6 @@ instance Serial BloomFlags where
         BloomUpdateP2PubKeyOnly -> 2
 
 
-instance Binary BloomFlags where
-    get = deserialize
-    put = serialize
-
-
-instance Serialize BloomFlags where
-    get = deserialize
-    put = serialize
-
-
 -- | A bloom filter is a probabilistic data structure that SPV clients send to
 -- other peers to filter the set of transactions received from them. Bloom
 -- filters can have false positives but not false negatives. Some transactions
@@ -144,16 +134,6 @@ instance Serial BloomFilter where
         serialize flags
 
 
-instance Binary BloomFilter where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize BloomFilter where
-    put = serialize
-    get = deserialize
-
-
 -- | Set a new bloom filter on the peer connection.
 newtype FilterLoad = FilterLoad {filterLoadBloomFilter :: BloomFilter}
     deriving (Eq, Show, Read, Generic, NFData)
@@ -162,16 +142,6 @@ newtype FilterLoad = FilterLoad {filterLoadBloomFilter :: BloomFilter}
 instance Serial FilterLoad where
     deserialize = FilterLoad <$> deserialize
     serialize (FilterLoad f) = serialize f
-
-
-instance Binary FilterLoad where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize FilterLoad where
-    put = serialize
-    get = deserialize
 
 
 -- | Add the given data element to the connections current filter without
@@ -190,16 +160,6 @@ instance Serial FilterAdd where
     serialize (FilterAdd bs) = do
         putVarInt $ BS.length bs
         putByteString bs
-
-
-instance Binary FilterAdd where
-    put = serialize
-    get = deserialize
-
-
-instance Serialize FilterAdd where
-    put = serialize
-    get = deserialize
 
 
 -- | Build a bloom filter that will provide the given false positive rate when

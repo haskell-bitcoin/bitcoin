@@ -160,16 +160,6 @@ instance Serial BlockNode where
             _ -> serialize $ nodeSkip bn
 
 
-instance Serialize BlockNode where
-    put = serialize
-    get = deserialize
-
-
-instance Binary BlockNode where
-    put = serialize
-    get = deserialize
-
-
 instance Eq BlockNode where
     (==) = (==) `on` nodeHeader
 

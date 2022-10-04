@@ -60,8 +60,6 @@ import Data.Word (Word8)
 -- | An x-only pubkey corresponds to the keys @(x,y)@ and @(x, -y)@.  The
 --equality test only checks the x-coordinate.  An x-only pubkey serializes to 32
 --bytes.
---
--- @since 0.21.0
 newtype XOnlyPubKey = XOnlyPubKey {xOnlyPubKey :: PubKey}
     deriving (Show)
 
@@ -94,15 +92,12 @@ instance Binary XOnlyPubKey where
     get = deserialize
 
 
--- | @since 0.21.0
 type TapLeafVersion = Word8
 
 
 -- | Merklized Abstract Syntax Tree.  This type can represent trees where only a
 --subset of the leaves are known.  Note that the tree is invariant under swapping
 --branches at an internal node.
---
--- @since 0.21.0
 data MAST
     = MASTBranch MAST MAST
     | MASTLeaf TapLeafVersion Script
@@ -112,8 +107,6 @@ data MAST
 
 -- | Get the inclusion proofs for the leaves in the tree.  The proof is ordered
 --leaf-to-root.
---
--- @since 0.21.0
 getMerkleProofs :: MAST -> [(TapLeafVersion, Script, [Digest SHA256])]
 getMerkleProofs = getProofs mempty
   where
@@ -128,8 +121,6 @@ getMerkleProofs = getProofs mempty
 
 
 -- | Calculate the root hash for this tree.
---
--- @since 0.21.0
 mastCommitment :: MAST -> Digest SHA256
 mastCommitment = \case
     MASTBranch leftBranch rightBranch ->
@@ -162,8 +153,6 @@ leafHash leafVersion leafScript =
 
 
 -- | Representation of a full taproot output.
---
--- @since 0.21.0
 data TaprootOutput = TaprootOutput
     { taprootInternalKey :: PubKey
     , taprootMAST :: Maybe MAST
@@ -171,7 +160,6 @@ data TaprootOutput = TaprootOutput
     deriving (Show)
 
 
--- | @since 0.21.0
 taprootOutputKey :: TaprootOutput -> PubKey
 taprootOutputKey TaprootOutput{taprootInternalKey, taprootMAST} =
     fromMaybe keyFail $ tweak commitment >>= tweakAddPubKey taprootInternalKey
@@ -192,15 +180,11 @@ taprootCommitment internalKey merkleRoot =
 
 
 -- | Generate the output script for a taproot output
---
--- @since 0.21.0
 taprootScriptOutput :: TaprootOutput -> ScriptOutput
 taprootScriptOutput = PayWitness 0x01 . runPutS . serialize . XOnlyPubKey . taprootOutputKey
 
 
 -- | Comprehension of taproot witness data
---
--- @since 0.21.0
 data TaprootWitness
     = -- | Signature
       KeyPathSpend ByteString
@@ -208,7 +192,6 @@ data TaprootWitness
     deriving (Eq, Show)
 
 
--- | @since 0.21.0
 data ScriptPathData = ScriptPathData
     { scriptPathAnnex :: Maybe ByteString
     , scriptPathStack :: [ByteString]
@@ -223,8 +206,6 @@ data ScriptPathData = ScriptPathData
 
 
 -- | Try to interpret a 'WitnessStack' as taproot witness data.
---
--- @since 0.21.0
 viewTaprootWitness :: WitnessStack -> Maybe TaprootWitness
 viewTaprootWitness witnessStack = case reverse witnessStack of
     [sig] -> Just $ KeyPathSpend sig
@@ -257,8 +238,6 @@ viewTaprootWitness witnessStack = case reverse witnessStack of
 
 
 -- | Transform the high-level representation of taproot witness data into a witness stack
---
--- @since 0.21.0
 encodeTaprootWitness :: TaprootWitness -> WitnessStack
 encodeTaprootWitness = \case
     KeyPathSpend signature -> pure signature
@@ -277,8 +256,6 @@ encodeTaprootWitness = \case
 
 
 -- | Verify that the script path spend is valid, except for script execution.
---
--- @since 0.21.0
 verifyScriptPathData ::
     -- | Output key
     PubKey ->

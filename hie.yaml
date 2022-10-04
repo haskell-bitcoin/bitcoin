@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:bitcoin"
+
+    - path: "test"
+      component: "bitcoin:test:spec"

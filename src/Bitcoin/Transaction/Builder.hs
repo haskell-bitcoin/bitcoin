@@ -25,31 +25,8 @@ module Bitcoin.Transaction.Builder (
     mergeTxInput,
     findSigInput,
     verifyStdInput,
-
-    -- * Coin Selection
-    Coin (..),
-    countMulSig,
-    guessTxFee,
-    guessMSTxFee,
-    guessTxSize,
-    guessMSSize,
 ) where
 
-import Control.Applicative ((<|>))
-import Control.Arrow (first)
-import Control.Monad (foldM, unless)
-import Control.Monad.Identity (runIdentity)
-import Crypto.Secp256k1
-import qualified Data.ByteString as B
-import Data.Bytes.Get
-import Data.Bytes.Put
-import Data.Bytes.Serial
-import Data.Either (fromRight)
-import Data.List (nub)
-import Data.Maybe (catMaybes, fromJust, isJust)
-import Data.String.Conversions (cs)
-import Data.Text (Text)
-import Data.Word (Word64)
 import Bitcoin.Address
 import Bitcoin.Crypto.Hash (Hash256, addressHash)
 import Bitcoin.Crypto.Signature
@@ -71,86 +48,21 @@ import Bitcoin.Transaction.Segwit (
     viewWitnessProgram,
  )
 import Bitcoin.Util
-
-
--- | Any type can be used as a Coin if it can provide a value in Satoshi.
--- The value is used in coin selection algorithms.
-class Coin c where
-    coinValue :: c -> Word64
-
-
--- | Estimate tranasction fee to pay based on transaction size estimation.
-guessTxFee :: Word64 -> Int -> Int -> Word64
-guessTxFee byteFee nOut nIn =
-    byteFee * fromIntegral (guessTxSize nIn [] nOut 0)
-
-
--- | Same as 'guessTxFee' but for multisig transactions.
-guessMSTxFee :: Word64 -> (Int, Int) -> Int -> Int -> Word64
-guessMSTxFee byteFee ms nOut nIn =
-    byteFee * fromIntegral (guessTxSize 0 (replicate nIn ms) nOut 0)
-
-
--- | Computes an upper bound on the size of a transaction based on some known
--- properties of the transaction.
-guessTxSize ::
-    -- | number of regular transaction inputs
-    Int ->
-    -- | multisig m of n for each input
-    [(Int, Int)] ->
-    -- | number of P2PKH outputs
-    Int ->
-    -- | number of P2SH outputs
-    Int ->
-    -- | upper bound on transaction size
-    Int
-guessTxSize pki msi pkout msout =
-    8 + inpLen + inp + outLen + out
-  where
-    inpLen =
-        B.length
-            . runPutS
-            . serialize
-            . VarInt
-            . fromIntegral
-            $ length msi + pki
-    outLen =
-        B.length
-            . runPutS
-            . serialize
-            . VarInt
-            . fromIntegral
-            $ pkout + msout
-    inp = pki * 148 + sum (map guessMSSize msi)
-    -- (20: hash160) + (5: opcodes) +
-    -- (1: script len) + (8: Word64)
-    out =
-        pkout * 34
-            +
-            -- (20: hash160) + (3: opcodes) +
-            -- (1: script len) + (8: Word64)
-            msout * 32
-
-
--- | Size of a multisig P2SH input.
-guessMSSize :: (Int, Int) -> Int
-guessMSSize (m, n) =
-    -- OutPoint (36) + Sequence (4) + Script
-    40
-        + fromIntegral (B.length $ runPutS . serialize $ VarInt $ fromIntegral scp)
-        + scp
-  where
-    -- OP_M + n*PubKey + OP_N + OP_CHECKMULTISIG
-
-    rdm =
-        fromIntegral
-            . B.length
-            . runPutS
-            . serialize
-            . opPushData
-            $ B.replicate (n * 34 + 3) 0
-    -- Redeem + m*sig + OP_0
-    scp = rdm + m * 73 + 1
+import Control.Applicative ((<|>))
+import Control.Arrow (first)
+import Control.Monad (foldM, unless)
+import Control.Monad.Identity (runIdentity)
+import Crypto.Secp256k1
+import qualified Data.ByteString as B
+import Data.Bytes.Get
+import Data.Bytes.Put
+import Data.Bytes.Serial
+import Data.Either (fromRight)
+import Data.List (nub)
+import Data.Maybe (catMaybes, fromJust, isJust)
+import Data.String.Conversions (cs)
+import Data.Text (Text)
+import Data.Word (Word64)
 
 
 {- Build a new Tx -}

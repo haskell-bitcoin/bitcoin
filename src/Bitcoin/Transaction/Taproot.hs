@@ -25,6 +25,12 @@ module Bitcoin.Transaction.Taproot (
     verifyScriptPathData,
 ) where
 
+import Bitcoin.Crypto (PubKey, initTaggedHash, tweak, tweakAddPubKey)
+import Bitcoin.Keys.Common (PubKeyI (PubKeyI), pubKeyPoint)
+import Bitcoin.Script.Common (Script)
+import Bitcoin.Script.Standard (ScriptOutput (PayWitness))
+import Bitcoin.Transaction.Common (WitnessStack)
+import Bitcoin.Util (decodeHex, eitherToMaybe, encodeHex)
 import Control.Applicative (many)
 import Control.Monad ((<=<))
 import Crypto.Hash (
@@ -35,7 +41,6 @@ import Crypto.Hash (
     hashUpdate,
     hashUpdates,
  )
-import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), withText)
 import Data.Binary (Binary (..))
 import Data.Bits ((.&.), (.|.))
 import Data.Bool (bool)
@@ -50,12 +55,6 @@ import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Serialize (Serialize, get, getByteString, getWord8, put)
 import Data.Word (Word8)
-import Bitcoin.Crypto (PubKey, initTaggedHash, tweak, tweakAddPubKey)
-import Bitcoin.Keys.Common (PubKeyI (PubKeyI), pubKeyPoint)
-import Bitcoin.Script.Common (Script)
-import Bitcoin.Script.Standard (ScriptOutput (PayWitness))
-import Bitcoin.Transaction.Common (WitnessStack)
-import Bitcoin.Util (decodeHex, eitherToMaybe, encodeHex)
 
 
 -- | An x-only pubkey corresponds to the keys @(x,y)@ and @(x, -y)@.  The
@@ -93,19 +92,6 @@ instance Serialize XOnlyPubKey where
 instance Binary XOnlyPubKey where
     put = serialize
     get = deserialize
-
-
--- | Hex encoding
-instance FromJSON XOnlyPubKey where
-    parseJSON =
-        withText "XOnlyPubKey" $
-            either fail pure
-                . (runGetS deserialize <=< maybe (Left "Unable to decode hex") Right . decodeHex)
-
-
--- | Hex encoding
-instance ToJSON XOnlyPubKey where
-    toJSON = toJSON . encodeHex . runPutS . serialize
 
 
 -- | @since 0.21.0

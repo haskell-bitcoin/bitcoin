@@ -22,9 +22,6 @@ module Bitcoin.Address (
     textToAddr,
     bech32ToAddr,
     base58ToAddr,
-    addrToJSON,
-    addrToEncoding,
-    addrFromJSON,
     pubKeyAddr,
     pubKeyWitnessAddr,
     pubKeyCompatWitnessAddr,
@@ -46,13 +43,17 @@ module Bitcoin.Address (
     module Bitcoin.Address.Bech32,
 ) where
 
+import Bitcoin.Address.Base58
+import Bitcoin.Address.Bech32
+import Bitcoin.Crypto
+import Bitcoin.Data
+import Bitcoin.Keys.Common
+import Bitcoin.Script
+import Bitcoin.Util
 import Control.Applicative
 import Control.Arrow (second)
 import Control.DeepSeq
 import Control.Monad
-import Data.Aeson as A
-import Data.Aeson.Encoding as A
-import Data.Aeson.Types
 import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -66,13 +67,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Bitcoin.Address.Base58
-import Bitcoin.Address.Bech32
-import Bitcoin.Crypto
-import Bitcoin.Data
-import Bitcoin.Keys.Common
-import Bitcoin.Script
-import Bitcoin.Util
 
 
 -- | Address format for Bitcoin
@@ -179,24 +173,6 @@ isWitnessScriptAddress _ = False
 isWitnessAddress :: Address -> Bool
 isWitnessAddress WitnessAddress{} = True
 isWitnessAddress _ = False
-
-
-addrToJSON :: Network -> Address -> Value
-addrToJSON net a = toJSON (addrToText net a)
-
-
-addrToEncoding :: Network -> Address -> Encoding
-addrToEncoding net = maybe null_ text . addrToText net
-
-
--- | JSON parsing for Bitcoin addresses. Works with 'Base58', and
--- 'Bech32'.
-addrFromJSON :: Network -> Value -> Parser Address
-addrFromJSON net =
-    withText "address" $ \t ->
-        case textToAddr net t of
-            Nothing -> fail "could not decode address"
-            Just x -> return x
 
 
 -- | Convert address to human-readable string. Uses 'Base58', or 'Bech32'

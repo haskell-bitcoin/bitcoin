@@ -15,22 +15,17 @@ module Bitcoin.Util.Arbitrary.Util (
     arbitraryNetwork,
     arbitraryUTCTime,
     SerialBox (..),
-    JsonBox (..),
-    NetBox (..),
     ReadBox (..),
     testIdentity,
     testSerial,
     testRead,
-    testJson,
-    testNetJson,
     arbitraryNetData,
     genNetData,
 ) where
 
+import Bitcoin.Constants
+import Bitcoin.Data
 import Control.Monad (forM_, (<=<))
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Encoding as A
-import qualified Data.Aeson.Types as A
 import Data.ByteString (ByteString, pack)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Short as BSS
@@ -43,8 +38,6 @@ import Data.Time.Clock (UTCTime (..))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Typeable as T
 import Data.Word (Word32)
-import Bitcoin.Constants
-import Bitcoin.Data
 import Test.Hspec (Spec, describe, shouldBe, shouldSatisfy)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
@@ -115,37 +108,24 @@ data ReadBox
       ReadBox (Gen a)
 
 
-data JsonBox
-    = forall a.
-        (Show a, Eq a, T.Typeable a, A.ToJSON a, A.FromJSON a) =>
-      JsonBox (Gen a)
+-- data NetBox
+--     = forall a.
+--         (Show a, Eq a, T.Typeable a) =>
+--       NetBox
+--         ( Network -> a -> A.Value
+--         , Network -> a -> A.Encoding
+--         , Network -> A.Value -> A.Parser a
+--         , Gen (Network, a)
+--         )
 
-
-data NetBox
-    = forall a.
-        (Show a, Eq a, T.Typeable a) =>
-      NetBox
-        ( Network -> a -> A.Value
-        , Network -> a -> A.Encoding
-        , Network -> A.Value -> A.Parser a
-        , Gen (Network, a)
-        )
-
-
-testIdentity :: [SerialBox] -> [ReadBox] -> [JsonBox] -> [NetBox] -> Spec
-testIdentity serialVals readVals jsonVals netVals = do
+testIdentity :: [SerialBox] -> [ReadBox] -> Spec
+testIdentity serialVals readVals = do
     describe "Binary Encoding" $
         forM_ serialVals $
             \(SerialBox g) -> testSerial g
     describe "Read/Show Encoding" $
         forM_ readVals $
             \(ReadBox g) -> testRead g
-    describe "Data.Aeson Encoding" $
-        forM_ jsonVals $
-            \(JsonBox g) -> testJson g
-    describe "Data.Aeson Encoding with Network" $
-        forM_ netVals $
-            \(NetBox (j, e, p, g)) -> testNetJson j e p g
 
 
 -- | Generate binary identity tests
@@ -177,48 +157,6 @@ testRead gen =
     proxy = const Proxy
 
 
--- | Generate Data.Aeson identity tests
-testJson ::
-    (Eq a, Show a, T.Typeable a, A.ToJSON a, A.FromJSON a) => Gen a -> Spec
-testJson gen = do
-    prop ("Data.Aeson toJSON/fromJSON identity for " <> name) $
-        forAll gen (`shouldSatisfy` jsonID)
-    prop ("Data.Aeson toEncoding/fromJSON identity for " <> name) $
-        forAll gen (`shouldSatisfy` encodingID)
-  where
-    name = show $ T.typeRep $ proxy gen
-    proxy :: Gen a -> Proxy a
-    proxy = const Proxy
-    jsonID x = (A.fromJSON . A.toJSON) (toMap x) == A.Success (toMap x)
-    encodingID x =
-        (A.decode . A.encodingToLazyByteString . A.toEncoding) (toMap x)
-            == Just (toMap x)
-
-
--- | Generate Data.Aeson identity tests for type that need the @Network@
-testNetJson ::
-    (Eq a, Show a, T.Typeable a) =>
-    (Network -> a -> A.Value) ->
-    (Network -> a -> A.Encoding) ->
-    (Network -> A.Value -> A.Parser a) ->
-    Gen (Network, a) ->
-    Spec
-testNetJson j e p g = do
-    prop ("Data.Aeson toJSON/fromJSON identity (with network) for " <> name) $
-        forAll g $
-            \(net, x) -> dec net (encVal net x) `shouldBe` Just x
-    prop ("Data.Aeson toEncoding/fromJSON identity (with network) for " <> name) $
-        forAll g $
-            \(net, x) -> dec net (encEnc net x) `shouldBe` Just x
-  where
-    encVal net = A.encode . toMap . j net
-    encEnc net = A.encodingToLazyByteString . toMapE . e net
-    dec net = A.parseMaybe (p net) . fromMap <=< A.decode
-    name = show $ T.typeRep $ proxy j
-    proxy :: (Network -> a -> A.Value) -> Proxy a
-    proxy = const Proxy
-
-
 arbitraryNetData :: Arbitrary a => Gen (Network, a)
 arbitraryNetData = do
     net <- arbitraryNetwork
@@ -235,10 +173,6 @@ genNetData gen = do
 
 toMap :: a -> Map.Map String a
 toMap = Map.singleton "object"
-
-
-toMapE :: A.Encoding -> A.Encoding
-toMapE = A.pairs . A.pair "object"
 
 
 fromMap :: Map.Map String a -> a

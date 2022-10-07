@@ -19,33 +19,6 @@ module Bitcoin.Transaction.Builder.Sign (
     sigKeys,
 ) where
 
-import Control.DeepSeq (NFData)
-import Control.Monad (foldM, when)
-import Data.Aeson (
-    FromJSON,
-    ToJSON (..),
-    object,
-    pairs,
-    parseJSON,
-    withObject,
-    (.:),
-    (.:?),
-    (.=),
- )
-import Data.Bytes.Get
-import Data.Bytes.Put
-import Data.Bytes.Serial
-import Data.Either (rights)
-import Data.Hashable (Hashable)
-import Data.List (find, nub)
-import Data.Maybe (
-    catMaybes,
-    fromMaybe,
-    mapMaybe,
-    maybeToList,
- )
-import Data.Word (Word64)
-import GHC.Generics (Generic)
 import Bitcoin.Address (getAddrHash160, pubKeyAddr)
 import Bitcoin.Crypto (Hash256, SecKey)
 import Bitcoin.Crypto.Signature (signHash, verifyHashSig)
@@ -60,6 +33,22 @@ import Bitcoin.Script
 import Bitcoin.Transaction.Common
 import Bitcoin.Transaction.Segwit
 import Bitcoin.Util (matchTemplate, updateIndex)
+import Control.DeepSeq (NFData)
+import Control.Monad (foldM, when)
+import Data.Bytes.Get
+import Data.Bytes.Put
+import Data.Bytes.Serial
+import Data.Either (rights)
+import Data.Hashable (Hashable)
+import Data.List (find, nub)
+import Data.Maybe (
+    catMaybes,
+    fromMaybe,
+    mapMaybe,
+    maybeToList,
+ )
+import Data.Word (Word64)
+import GHC.Generics (Generic)
 
 
 -- | Data type used to specify the signing parameters of a transaction input.
@@ -83,35 +72,6 @@ data SigInput = SigInput
     -- ^ redeem script
     }
     deriving (Eq, Show, Read, Generic, Hashable, NFData)
-
-
-instance ToJSON SigInput where
-    toJSON (SigInput so val op sh rdm) =
-        object $
-            [ "pkscript" .= so
-            , "value" .= val
-            , "outpoint" .= op
-            , "sighash" .= sh
-            ]
-                ++ ["redeem" .= r | r <- maybeToList rdm]
-    toEncoding (SigInput so val op sh rdm) =
-        pairs $
-            "pkscript" .= so
-                <> "value" .= val
-                <> "outpoint" .= op
-                <> "sighash" .= sh
-                <> maybe mempty ("redeem" .=) rdm
-
-
-instance FromJSON SigInput where
-    parseJSON =
-        withObject "SigInput" $ \o ->
-            SigInput
-                <$> o .: "pkscript"
-                <*> o .: "value"
-                <*> o .: "outpoint"
-                <*> o .: "sighash"
-                <*> o .:? "redeem"
 
 
 -- | Sign a transaction by providing the 'SigInput' signing parameters and a
@@ -167,8 +127,6 @@ signInput net tx i (sigIn@(SigInput so val _ _ rdmM), nest) key = do
 
 
 -- | Add the witness data of the transaction given segwit parameters for an input.
---
--- @since 0.11.0.0
 updatedWitnessData :: Tx -> Int -> ScriptOutput -> ScriptInput -> Either String WitnessData
 updatedWitnessData tx i so si
     | isSegwit so = updateWitness . toWitnessStack =<< calcWitnessProgram so si
@@ -273,8 +231,6 @@ buildInput net tx i so val rdmM sig pub = do
 
 -- | Apply heuristics to extract the signatures for a particular input that are
 -- embedded in the transaction.
---
--- @since 0.11.0.0
 parseExistingSigs :: Network -> Tx -> ScriptOutput -> Int -> [TxSignature]
 parseExistingSigs net tx so i = insSigs <> witSigs
   where
@@ -298,8 +254,6 @@ makeSignature net tx i (SigInput so val _ sh rdmM) key =
 
 
 -- | A function which selects the digest algorithm and parameters as appropriate
---
--- @since 0.11.0.0
 makeSigHash ::
     Network ->
     Tx ->

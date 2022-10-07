@@ -27,9 +27,15 @@ module Bitcoin.Script.SigHash (
     decodeTxSig,
 ) where
 
+import Bitcoin.Crypto
+import Bitcoin.Crypto.Hash
+import Bitcoin.Data
+import Bitcoin.Network.Common
+import Bitcoin.Script.Common
+import Bitcoin.Transaction.Common
+import Bitcoin.Util
 import Control.DeepSeq
 import Control.Monad
-import qualified Data.Aeson as J
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.Bytes.Get
@@ -40,13 +46,6 @@ import Data.Maybe
 import Data.Scientific
 import Data.Word
 import GHC.Generics (Generic)
-import Bitcoin.Crypto
-import Bitcoin.Crypto.Hash
-import Bitcoin.Data
-import Bitcoin.Network.Common
-import Bitcoin.Script.Common
-import Bitcoin.Transaction.Common
-import Bitcoin.Util
 
 
 -- | Constant representing a SIGHASH flag that controls what is being signed.
@@ -107,17 +106,6 @@ newtype SigHash
         , Hashable
         , NFData
         )
-
-
-instance J.FromJSON SigHash where
-    parseJSON =
-        J.withScientific "sighash" $
-            maybe mzero (return . SigHash) . toBoundedInteger
-
-
-instance J.ToJSON SigHash where
-    toJSON = J.Number . fromIntegral
-    toEncoding (SigHash n) = J.toEncoding n
 
 
 -- | SIGHASH_NONE as a byte.

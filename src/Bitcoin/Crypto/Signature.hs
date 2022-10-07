@@ -14,9 +14,9 @@ module Bitcoin.Crypto.Signature (
     verifyHashSig,
     isCanonicalHalfOrder,
     decodeStrictSig,
-    exportSig,
 ) where
 
+import Bitcoin.Crypto.Hash
 import Control.Monad (guard, unless, when)
 import Crypto.Secp256k1
 import Data.Binary (Binary (..))
@@ -27,32 +27,23 @@ import Data.Bytes.Put
 import Data.Bytes.Serial
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Serialize (Serialize (..))
-import Bitcoin.Crypto.Hash
 import Numeric (showHex)
 
 
--- | Convert 256-bit hash into a 'Msg' for signing or verification.
-hashToMsg :: Hash256 -> Msg
-hashToMsg =
-    fromMaybe e . msg . runPutS . serialize
-  where
-    e = error "Could not convert 32-byte hash to secp256k1 message"
-
-
 -- | Sign a 256-bit hash using secp256k1 elliptic curve.
-signHash :: SecKey -> Hash256 -> Sig
-signHash k = signMsg k . hashToMsg
+signHash :: SecKey -> Hash256 -> Signature
+signHash k = ecdsaSign k . fromShort . getHash256
 
 
 -- | Verify an ECDSA signature for a 256-bit hash.
-verifyHashSig :: Hash256 -> Sig -> PubKey -> Bool
+verifyHashSig :: Hash256 -> Signature -> PubKeyXY -> Bool
 verifyHashSig h s p = verifySig p norm (hashToMsg h)
   where
     norm = fromMaybe s (normalizeSig s)
 
 
 -- | Deserialize an ECDSA signature as commonly encoded in Bitcoin.
-getSig :: MonadGet m => m Sig
+getSig :: MonadGet m => m Signature
 getSig = do
     l <-
         lookAhead $ do
@@ -72,17 +63,17 @@ getSig = do
 
 
 -- | Serialize an ECDSA signature for Bitcoin use.
-putSig :: MonadPut m => Sig -> m ()
+putSig :: MonadPut m => Signature -> m ()
 putSig s = putByteString $ exportSig s
 
 
 -- | Is canonical half order.
-isCanonicalHalfOrder :: Sig -> Bool
+isCanonicalHalfOrder :: Signature -> Bool
 isCanonicalHalfOrder = isNothing . normalizeSig
 
 
 -- | Decode signature strictly.
-decodeStrictSig :: ByteString -> Maybe Sig
+decodeStrictSig :: ByteString -> Maybe Signature
 decodeStrictSig bs = do
     g <- importSig bs
     -- <http://www.secg.org/sec1-v2.pdf Section 4.1.4>

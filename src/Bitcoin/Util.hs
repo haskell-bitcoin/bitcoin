@@ -53,7 +53,7 @@ module Bitcoin.Util (
 ) where
 
 import Control.Monad
-import Control.Monad.Trans.Except (ExceptT (..))
+import Control.Monad.Trans.Except (ExceptT (..), except)
 import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -149,7 +149,7 @@ maybeToEither err = maybe (Left err) Right
 
 -- | Lift a 'Maybe' computation into the 'ExceptT' monad.
 liftMaybe :: Monad m => b -> Maybe a -> ExceptT b m a
-liftMaybe err = ExceptT . pure . maybeToEither err
+liftMaybe err = except . maybeToEither err
 
 
 -- Various helpers

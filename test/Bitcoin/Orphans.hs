@@ -65,16 +65,16 @@ instance FromJSON BlockHeader where
         withObject "BlockHeader" $ \o ->
             BlockHeader
                 <$> o
-                .: "version"
+                    .: "version"
                 <*> o
-                .: "prevblock"
+                    .: "prevblock"
                 <*> (f =<< o .: "merkleroot")
                 <*> o
-                .: "timestamp"
+                    .: "timestamp"
                 <*> o
-                .: "bits"
+                    .: "bits"
                 <*> o
-                .: "nonce"
+                    .: "nonce"
       where
         f = maybe mzero return . (eitherToMaybe . runGetS deserialize <=< decodeHex)
 
@@ -110,10 +110,10 @@ instance FromJSON TxIn where
         withObject "TxIn" $ \o ->
             TxIn
                 <$> o
-                .: "prevoutput"
+                    .: "prevoutput"
                 <*> (maybe mzero return . decodeHex =<< o .: "inputscript")
                 <*> o
-                .: "sequence"
+                    .: "sequence"
 
 
 instance ToJSON TxIn where
@@ -139,7 +139,7 @@ instance FromJSON TxOut where
         withObject "TxOut" $ \o ->
             TxOut
                 <$> o
-                .: "value"
+                    .: "value"
                 <*> (maybe mzero return . decodeHex =<< o .: "outputscript")
 
 
@@ -154,14 +154,14 @@ instance FromJSON Tx where
     parseJSON = withObject "Tx" $ \o ->
         Tx
             <$> o
-            .: "version"
+                .: "version"
             <*> o
-            .: "inputs"
+                .: "inputs"
             <*> o
-            .: "outputs"
+                .: "outputs"
             <*> (mapM (mapM f) =<< o .: "witnessdata")
             <*> o
-            .: "locktime"
+                .: "locktime"
       where
         f = maybe mzero return . decodeHex
 
@@ -305,15 +305,15 @@ instance FromJSON SigInput where
         withObject "SigInput" $ \o ->
             SigInput
                 <$> o
-                .: "pkscript"
+                    .: "pkscript"
                 <*> o
-                .: "value"
+                    .: "value"
                 <*> o
-                .: "outpoint"
+                    .: "outpoint"
                 <*> o
-                .: "sighash"
+                    .: "sighash"
                 <*> o
-                .:? "redeem"
+                    .:? "redeem"
 
 
 -- | Hex encoding

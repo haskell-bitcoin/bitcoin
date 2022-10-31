@@ -2,7 +2,6 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 -- |
 -- Stability   : experimental
@@ -211,7 +210,7 @@ bech32EncodeResult enc hrp dat =
         result = T.concat [T.toLower hrp, T.pack "1", T.pack rest]
         validHrp = checkHRP hrp
         validLength = result `T.compareLength` maxBech32Length /= GT
-     in Bech32EncodeResult{..}
+     in Bech32EncodeResult{result, validHrp, validLength}
 
 
 -- | Check that human-readable part is valid for a 'Bech32' string.
@@ -254,7 +253,14 @@ bech32DecodeResult bech32 =
         validDataPart = mapM charsetMap $ T.unpack dat
         validChecksum = join $ bech32VerifyChecksum <$> validHrp <*> validDataPart
         result = take (T.length dat - 6) <$> validDataPart
-     in Bech32DecodeResult{..}
+     in Bech32DecodeResult
+            { validChecksum
+            , validHrp
+            , result
+            , validLength
+            , validCase
+            , validDataLength
+            }
   where
     lowerBech32 = T.toLower bech32
 

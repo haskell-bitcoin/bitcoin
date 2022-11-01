@@ -1,4 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -182,19 +181,19 @@ maxBech32Length = 90
 bech32Encode :: Bech32Encoding -> HRP -> [Word5] -> Maybe Bech32
 bech32Encode enc hrp dat = do
     Bech32EncodeResult
-        { result
-        , validHrp = True
-        , validLength = True
+        { encodeResult
+        , encodeValidHrp = True
+        , encodeValidLength = True
         } <-
         pure $ bech32EncodeResult enc hrp dat
-    return result
+    return encodeResult
 
 
 -- | The result of encoding a 'Bech32' string
 data Bech32EncodeResult = Bech32EncodeResult
-    { result :: Text
-    , validHrp :: Bool
-    , validLength :: Bool
+    { encodeResult :: Text
+    , encodeValidHrp :: Bool
+    , encodeValidLength :: Bool
     }
     deriving (Show, Eq)
 
@@ -207,10 +206,10 @@ bech32EncodeResult :: Bech32Encoding -> HRP -> [Word5] -> Bech32EncodeResult
 bech32EncodeResult enc hrp dat =
     let dat' = dat ++ bech32CreateChecksum enc (T.toLower hrp) dat
         rest = map (charset !) dat'
-        result = T.concat [T.toLower hrp, T.pack "1", T.pack rest]
-        validHrp = checkHRP hrp
-        validLength = result `T.compareLength` maxBech32Length /= GT
-     in Bech32EncodeResult{result, validHrp, validLength}
+        encodeResult = T.concat [T.toLower hrp, T.pack "1", T.pack rest]
+        encodeValidHrp = checkHRP hrp
+        encodeValidLength = encodeResult `T.compareLength` maxBech32Length /= GT
+     in Bech32EncodeResult{encodeResult, encodeValidHrp, encodeValidLength}
 
 
 -- | Check that human-readable part is valid for a 'Bech32' string.
@@ -225,12 +224,12 @@ checkHRP hrp =
 bech32Decode :: Bech32 -> Maybe (Bech32Encoding, HRP, [Word5])
 bech32Decode bech32 = do
     Bech32DecodeResult
-        { validChecksum = Just enc
-        , validHrp = Just hrp
-        , result = Just words
-        , validLength = True
-        , validCase = True
-        , validDataLength = True
+        { decodeValidChecksum = Just enc
+        , decodeValidHrp = Just hrp
+        , decodeResult = Just words
+        , decodeValidLength = True
+        , decodeValidCase = True
+        , decodeValidDataLength = True
         } <-
         pure $ bech32DecodeResult bech32
     return (enc, hrp, words)
@@ -242,24 +241,28 @@ bech32Decode bech32 = do
 -- applications like lightning and taro or rich error reporting.
 bech32DecodeResult :: Bech32 -> Bech32DecodeResult
 bech32DecodeResult bech32 =
-    let validLength = bech32 `T.compareLength` maxBech32Length /= GT
-        validCase = T.toUpper bech32 == bech32 || lowerBech32 == bech32
+    let decodeValidLength = bech32 `T.compareLength` maxBech32Length /= GT
+        decodeValidCase = T.toUpper bech32 == bech32 || lowerBech32 == bech32
         (hrp, dat) = T.breakOnEnd "1" lowerBech32
-        validDataLength = dat `T.compareLength` 6 /= LT
-        validHrp = do
+        decodeValidDataLength = dat `T.compareLength` 6 /= LT
+        decodeValidHrp = do
             hrp' <- T.stripSuffix "1" hrp
             guard $ checkHRP hrp'
             return hrp'
-        validDataPart = mapM charsetMap $ T.unpack dat
-        validChecksum = join $ bech32VerifyChecksum <$> validHrp <*> validDataPart
-        result = take (T.length dat - 6) <$> validDataPart
+        decodeValidDataPart = mapM charsetMap $ T.unpack dat
+        decodeValidChecksum =
+            join $
+                bech32VerifyChecksum
+                    <$> decodeValidHrp
+                    <*> decodeValidDataPart
+        decodeResult = take (T.length dat - 6) <$> decodeValidDataPart
      in Bech32DecodeResult
-            { validChecksum
-            , validHrp
-            , result
-            , validLength
-            , validCase
-            , validDataLength
+            { decodeValidChecksum
+            , decodeValidHrp
+            , decodeResult
+            , decodeValidLength
+            , decodeValidCase
+            , decodeValidDataLength
             }
   where
     lowerBech32 = T.toLower bech32
@@ -267,12 +270,12 @@ bech32DecodeResult bech32 =
 
 -- | The result of decoding a 'Bech32' string
 data Bech32DecodeResult = Bech32DecodeResult
-    { validChecksum :: Maybe Bech32Encoding
-    , validHrp :: Maybe HRP
-    , result :: Maybe [Word5]
-    , validLength :: Bool
-    , validCase :: Bool
-    , validDataLength :: Bool
+    { decodeValidChecksum :: Maybe Bech32Encoding
+    , decodeValidHrp :: Maybe HRP
+    , decodeResult :: Maybe [Word5]
+    , decodeValidLength :: Bool
+    , decodeValidCase :: Bool
+    , decodeValidDataLength :: Bool
     }
     deriving (Show, Eq)
 

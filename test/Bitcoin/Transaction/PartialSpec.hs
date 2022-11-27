@@ -290,7 +290,7 @@ psbtSignerTest = do
   where
     signer = secKeySigner theSecKey <> xPrvSigner xprv (Just origin)
 
-    Just theSecKey = secKey "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    Just theSecKey = importSecKey "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     thePubKey = PubKeyI{pubKeyPoint = derivePubKey theSecKey, pubKeyCompressed = True}
 
     rootXPrv = makeXPrvKey "psbtSignerTest"
@@ -401,7 +401,7 @@ unfinalizedPkhPSBT net (prvKey, pubKey) =
             , scriptOutput = runPutS (serialize prevOutScript)
             }
     h = txSigHash net currTx prevOutScript (outValue prevOut) 0 sigHashAll
-    sig = encodeTxSig $ TxSignature (signHash (secKeyData prvKey) h) sigHashAll
+    sig = encodeTxSig $ TxSignature (fromJust $ signHash (secKeyData prvKey) h) sigHashAll
 
 
 arbitraryMultiSig :: Gen ([(SecKeyI, PubKeyI)], Int)
@@ -429,7 +429,7 @@ unfinalizedMsPSBT net (keys, m) =
     prevOut = TxOut{outValue = 200000000, scriptOutput = encodeOutputBS (toP2SH prevOutScript)}
     h = txSigHash net currTx prevOutScript (outValue prevOut) 0 sigHashAll
     sigs = fromList $ map sig keys
-    sig (prvKey, pubKey) = (pubKey, encodeTxSig $ TxSignature (signHash (secKeyData prvKey) h) sigHashAll)
+    sig (prvKey, pubKey) = (pubKey, encodeTxSig $ TxSignature (fromJust $ signHash (secKeyData prvKey) h) sigHashAll)
 
 
 unfinalizedTx :: TxHash -> Tx

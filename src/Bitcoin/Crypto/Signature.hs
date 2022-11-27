@@ -22,6 +22,7 @@ import Crypto.Secp256k1
 import Data.Binary (Binary (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import Data.ByteString.Short (fromShort)
 import Data.Bytes.Get
 import Data.Bytes.Put
 import Data.Bytes.Serial
@@ -31,15 +32,15 @@ import Numeric (showHex)
 
 
 -- | Sign a 256-bit hash using secp256k1 elliptic curve.
-signHash :: SecKey -> Hash256 -> Signature
+signHash :: SecKey -> Hash256 -> Maybe Signature
 signHash k = ecdsaSign k . fromShort . getHash256
 
 
 -- | Verify an ECDSA signature for a 256-bit hash.
 verifyHashSig :: Hash256 -> Signature -> PubKeyXY -> Bool
-verifyHashSig h s p = verifySig p norm (hashToMsg h)
+verifyHashSig h s p = ecdsaVerify (fromShort $ getHash256 h) p norm
   where
-    norm = fromMaybe s (normalizeSig s)
+    norm = fromMaybe s (normalizeSignature s)
 
 
 -- | Deserialize an ECDSA signature as commonly encoded in Bitcoin.
@@ -64,23 +65,23 @@ getSig = do
 
 -- | Serialize an ECDSA signature for Bitcoin use.
 putSig :: MonadPut m => Signature -> m ()
-putSig s = putByteString $ exportSig s
+putSig s = putByteString $ exportSignatureDer s
 
 
 -- | Is canonical half order.
 isCanonicalHalfOrder :: Signature -> Bool
-isCanonicalHalfOrder = isNothing . normalizeSig
+isCanonicalHalfOrder = isNothing . normalizeSignature
 
 
 -- | Decode signature strictly.
 decodeStrictSig :: ByteString -> Maybe Signature
 decodeStrictSig bs = do
-    g <- importSig bs
+    g <- importSignatureDer bs
     -- <http://www.secg.org/sec1-v2.pdf Section 4.1.4>
     -- 4.1.4.1 (r and s can not be zero)
-    let compact = exportCompactSig g
+    let compact = exportSignatureCompact g
     let zero = BS.replicate 32 0
-    guard $ BS.take 32 (getCompactSig compact) /= zero
-    guard $ BS.take 32 (BS.drop 32 (getCompactSig compact)) /= zero
+    guard $ BS.take 32 compact /= zero
+    guard $ BS.take 32 (BS.drop 32 compact) /= zero
     guard $ isCanonicalHalfOrder g
     return g

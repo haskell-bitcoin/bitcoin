@@ -311,7 +311,7 @@ countMulSig ::
     Script ->
     Word64 ->
     Int ->
-    [PubKey] ->
+    [PubKeyXY] ->
     [TxSignature] ->
     Int
 countMulSig net tx out val i =
@@ -320,7 +320,7 @@ countMulSig net tx out val i =
     h = txSigHash net tx out val i
 
 
-countMulSig' :: (SigHash -> Hash256) -> [PubKey] -> [TxSignature] -> Int
+countMulSig' :: (SigHash -> Hash256) -> [PubKeyXY] -> [TxSignature] -> Int
 countMulSig' _ [] _ = 0
 countMulSig' _ _ [] = 0
 countMulSig' h (_ : pubs) (TxSignatureEmpty : sigs) = countMulSig' h pubs sigs

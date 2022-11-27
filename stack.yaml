@@ -6,4 +6,5 @@ nix:
     - pkg-config
 extra-deps:
   - fourmolu-0.8.2.0
-  - libsecp256k1-0.1.0
+  - github: tochicool/libsecp256k1-haskell
+    commit: 2688e0b86dbbc81a9eb117af3f3a078c84e1c2ef

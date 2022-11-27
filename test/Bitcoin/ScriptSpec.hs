@@ -111,7 +111,7 @@ standardSpec net = do
                 derivePubKeyI $
                     wrapSecKey True $
                         fromJust $
-                            secKey $
+                            importSecKey $
                                 B.replicate 32 1
         decodeInput net (Script [OP_0, opPushData $ runPutS $ serialize pk])
             `shouldBe` Right (RegularInput (SpendPKHash TxSignatureEmpty pk))

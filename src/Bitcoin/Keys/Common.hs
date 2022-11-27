@@ -15,16 +15,16 @@ module Bitcoin.Keys.Common (
     -- * Public & Private Keys
     PubKeyI (..),
     SecKeyI (..),
-    exportPubKey,
-    importPubKey,
+    exportPubKeyXY,
+    importPubKeyXY,
     wrapPubKey,
     derivePubKeyI,
     wrapSecKey,
     fromMiniKey,
     tweakPubKey,
     tweakSecKey,
-    getSecKey,
-    secKey,
+    exportSecKey,
+    importSecKey,
 
     -- ** Private Key Wallet Import Format (WIF)
     fromWif,
@@ -55,7 +55,7 @@ import GHC.Generics (Generic)
 
 -- | Elliptic curve public key type with expected serialized compression flag.
 data PubKeyI = PubKeyI
-    { pubKeyPoint :: !PubKey
+    { pubKeyPoint :: !PubKeyXY
     , pubKeyCompressed :: !Bool
     }
     deriving (Generic, Eq, Show, Read, Hashable, NFData)
@@ -84,14 +84,14 @@ instance Serial PubKeyI where
         c = do
             bs <- getByteString 33
             maybe (fail "Could not decode public key") return $
-                PubKeyI <$> importPubKey bs <*> pure True
+                PubKeyI <$> importPubKeyXY bs <*> pure True
         u = do
             bs <- getByteString 65
             maybe (fail "Could not decode public key") return $
-                PubKeyI <$> importPubKey bs <*> pure False
+                PubKeyI <$> importPubKeyXY bs <*> pure False
 
 
-    serialize pk = putByteString $ exportPubKey (pubKeyCompressed pk) (pubKeyPoint pk)
+    serialize pk = putByteString $ exportPubKeyXY (pubKeyCompressed pk) (pubKeyPoint pk)
 
 
 instance Serialize PubKeyI where
@@ -105,7 +105,7 @@ instance Binary PubKeyI where
 
 
 -- | Wrap a public key from secp256k1 library adding information about compression.
-wrapPubKey :: Bool -> PubKey -> PubKeyI
+wrapPubKey :: Bool -> PubKeyXY -> PubKeyI
 wrapPubKey c p = PubKeyI p c
 
 
@@ -116,8 +116,8 @@ derivePubKeyI (SecKeyI d c) = PubKeyI (derivePubKey d) c
 
 
 -- | Tweak a public key.
-tweakPubKey :: PubKey -> Hash256 -> Maybe PubKey
-tweakPubKey p h = tweakAddPubKey p =<< tweak (runPutS (serialize h))
+tweakPubKey :: PubKeyXY -> Hash256 -> Maybe PubKeyXY
+tweakPubKey p h = pubKeyTweakAdd p =<< importTweak (runPutS (serialize h))
 
 
 -- | Elliptic curve private key type with expected public key compression
@@ -138,14 +138,14 @@ wrapSecKey c d = SecKeyI d c
 
 -- | Tweak a private key.
 tweakSecKey :: SecKey -> Hash256 -> Maybe SecKey
-tweakSecKey key h = tweakAddSecKey key =<< tweak (runPutS (serialize h))
+tweakSecKey key h = secKeyTweakAdd key =<< importTweak (runPutS (serialize h))
 
 
 -- | Decode Casascius mini private keys (22 or 30 characters).
 fromMiniKey :: ByteString -> Maybe SecKeyI
 fromMiniKey bs = do
     guard checkShortKey
-    wrapSecKey False <$> secKey (runPutS (serialize (sha256 bs)))
+    wrapSecKey False <$> importSecKey (runPutS (serialize (sha256 bs)))
   where
     checkHash = runPutS $ serialize $ sha256 $ bs `BS.append` "?"
     checkShortKey = BS.length bs `elem` [22, 30] && BS.head checkHash == 0x00
@@ -159,11 +159,11 @@ fromWif net wif = do
     guard (BS.head bs == getSecretPrefix net)
     case BS.length bs of
         -- Uncompressed format
-        33 -> wrapSecKey False <$> secKey (BS.tail bs)
+        33 -> wrapSecKey False <$> importSecKey (BS.tail bs)
         -- Compressed format
         34 -> do
             guard $ BS.last bs == 0x01
-            wrapSecKey True <$> secKey (BS.tail $ BS.init bs)
+            wrapSecKey True <$> importSecKey (BS.tail $ BS.init bs)
         -- Bad length
         _ -> Nothing
 
@@ -173,5 +173,5 @@ toWif :: Network -> SecKeyI -> Base58
 toWif net (SecKeyI k c) =
     encodeBase58Check . BS.cons (getSecretPrefix net) $
         if c
-            then getSecKey k `BS.snoc` 0x01
-            else getSecKey k
+            then exportSecKey k `BS.snoc` 0x01
+            else exportSecKey k

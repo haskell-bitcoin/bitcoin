@@ -205,7 +205,7 @@ data XPubKey = XPubKey
     -- ^ derivation index
     , xPubChain :: !ChainCode
     -- ^ chain code
-    , xPubKey :: !PubKey
+    , xPubKey :: !PubKeyXY
     -- ^ public key of this node
     }
     deriving (Generic, Eq, Show, Read, NFData, Hashable)
@@ -244,7 +244,7 @@ makeXPrvKey bs =
     XPrvKey 0 (Fingerprint 0) 0 c k
   where
     (p, c) = split512 $ hmac512 "Bitcoin seed" bs
-    k = fromMaybe err (secKey (runPutS (serialize p)))
+    k = fromMaybe err (importSecKey (runPutS (serialize p)))
     err = throw $ DerivationException "Invalid seed"
 
 
@@ -277,7 +277,7 @@ prvSubKey xkey child
     | otherwise = error "Invalid child derivation index"
   where
     pK = xPubKey $ deriveXPubKey xkey
-    m = B.append (exportPubKey True pK) (runPutS (serialize child))
+    m = B.append (exportPubKeyXY True pK) (runPutS (serialize child))
     (a, c) = split512 $ hmac512 (runPutS $ serialize $ xPrvChain xkey) m
     k = fromMaybe err $ tweakSecKey (xPrvKey xkey) a
     err = throw $ DerivationException "Invalid prvSubKey derivation"
@@ -297,7 +297,7 @@ pubSubKey xKey child
         XPubKey (xPubDepth xKey + 1) (xPubFP xKey) child c pK
     | otherwise = error "Invalid child derivation index"
   where
-    m = B.append (exportPubKey True (xPubKey xKey)) (runPutS $ serialize child)
+    m = B.append (exportPubKeyXY True (xPubKey xKey)) (runPutS $ serialize child)
     (a, c) = split512 $ hmac512 (runPutS $ serialize $ xPubChain xKey) m
     pK = fromMaybe err $ tweakPubKey (xPubKey xKey) a
     err = throw $ DerivationException "Invalid pubSubKey derivation"
@@ -359,7 +359,7 @@ xPrvID = xPubID . deriveXPubKey
 
 -- | Computes the key identifier of an extended public key.
 xPubID :: XPubKey -> Hash160
-xPubID = ripemd160 . runPutS . serialize . sha256 . exportPubKey True . xPubKey
+xPubID = ripemd160 . runPutS . serialize . sha256 . exportPubKeyXY True . xPubKey
 
 
 -- | Computes the key fingerprint of an extended private key.
@@ -477,7 +477,7 @@ hardSubKeys k = map (\i -> (hardSubKey k i, i)) . cycleIndex
 
 
 -- | Derive a standard address from an extended public key and an index.
-deriveAddr :: XPubKey -> KeyIndex -> (Address, PubKey)
+deriveAddr :: XPubKey -> KeyIndex -> (Address, PubKeyXY)
 deriveAddr k i =
     (xPubAddr key, xPubKey key)
   where
@@ -485,7 +485,7 @@ deriveAddr k i =
 
 
 -- | Derive a SegWit P2WPKH address from an extended public key and an index.
-deriveWitnessAddr :: XPubKey -> KeyIndex -> (Address, PubKey)
+deriveWitnessAddr :: XPubKey -> KeyIndex -> (Address, PubKeyXY)
 deriveWitnessAddr k i =
     (xPubWitnessAddr key, xPubKey key)
   where
@@ -494,7 +494,7 @@ deriveWitnessAddr k i =
 
 -- | Derive a backwards-compatible SegWit P2SH-P2WPKH address from an extended
 -- public key and an index.
-deriveCompatWitnessAddr :: XPubKey -> KeyIndex -> (Address, PubKey)
+deriveCompatWitnessAddr :: XPubKey -> KeyIndex -> (Address, PubKeyXY)
 deriveCompatWitnessAddr k i =
     (xPubCompatWitnessAddr key, xPubKey key)
   where
@@ -503,7 +503,7 @@ deriveCompatWitnessAddr k i =
 
 -- | Cyclic list of all addresses derived from a public key starting from an
 -- offset index.
-deriveAddrs :: XPubKey -> KeyIndex -> [(Address, PubKey, KeyIndex)]
+deriveAddrs :: XPubKey -> KeyIndex -> [(Address, PubKeyXY, KeyIndex)]
 deriveAddrs k =
     map f . cycleIndex
   where
@@ -512,7 +512,7 @@ deriveAddrs k =
 
 -- | Cyclic list of all SegWit P2WPKH addresses derived from a public key
 -- starting from an offset index.
-deriveWitnessAddrs :: XPubKey -> KeyIndex -> [(Address, PubKey, KeyIndex)]
+deriveWitnessAddrs :: XPubKey -> KeyIndex -> [(Address, PubKeyXY, KeyIndex)]
 deriveWitnessAddrs k =
     map f . cycleIndex
   where
@@ -521,7 +521,7 @@ deriveWitnessAddrs k =
 
 -- | Cyclic list of all backwards-compatible SegWit P2SH-P2WPKH addresses
 -- derived from a public key starting from an offset index.
-deriveCompatWitnessAddrs :: XPubKey -> KeyIndex -> [(Address, PubKey, KeyIndex)]
+deriveCompatWitnessAddrs :: XPubKey -> KeyIndex -> [(Address, PubKeyXY, KeyIndex)]
 deriveCompatWitnessAddrs k =
     map f . cycleIndex
   where
@@ -1026,14 +1026,14 @@ applyPath path key =
 {- Helpers for derivation paths and addresses -}
 
 -- | Derive an address from a given parent path.
-derivePathAddr :: XPubKey -> SoftPath -> KeyIndex -> (Address, PubKey)
+derivePathAddr :: XPubKey -> SoftPath -> KeyIndex -> (Address, PubKeyXY)
 derivePathAddr key path = deriveAddr (derivePubPath path key)
 
 
 -- | Cyclic list of all addresses derived from a given parent path and starting
 -- from the given offset index.
 derivePathAddrs ::
-    XPubKey -> SoftPath -> KeyIndex -> [(Address, PubKey, KeyIndex)]
+    XPubKey -> SoftPath -> KeyIndex -> [(Address, PubKeyXY, KeyIndex)]
 derivePathAddrs key path = deriveAddrs (derivePubPath path key)
 
 

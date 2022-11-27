@@ -44,6 +44,7 @@ import Data.Bytes.Serial
 import Data.Hashable
 import Data.Maybe
 import Data.Scientific
+import qualified Data.Text as T
 import Data.Word
 import GHC.Generics (Generic)
 
@@ -276,7 +277,7 @@ txSigHashSegwitV0 _ tx out v i sh =
 -- transaction inputs are of type 'TxSignature'.
 data TxSignature
     = TxSignature
-        { txSignature :: !Sig
+        { txSignature :: !Signature
         , txSignatureSigHash :: !SigHash
         }
     | TxSignatureEmpty

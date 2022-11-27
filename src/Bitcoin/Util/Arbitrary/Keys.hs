@@ -8,9 +8,12 @@ import Bitcoin.Keys.Common
 import Bitcoin.Keys.Extended
 import Bitcoin.Keys.Extended.Internal (Fingerprint (..))
 import Bitcoin.Util.Arbitrary.Crypto
+import Control.Monad (replicateM)
 import Data.Bits (clearBit)
+import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.List (foldl')
+import Data.Maybe (fromJust, isJust)
 import Data.Word (Word32)
 import Test.QuickCheck
 
@@ -92,9 +95,17 @@ arbitraryParsedPath =
 -- | Arbitrary message hash, private key, nonce and corresponding signature. The
 -- signature is generated with a random message, random private key and a random
 -- nonce.
-arbitrarySignature :: Gen (Hash256, SecKey, Sig)
+arbitrarySignature :: Gen (Hash256, SecKey, Signature)
 arbitrarySignature = do
     m <- arbitraryHash256
     key <- arbitrary
-    let sig = signHash key m
+    let Just sig = signHash key m
     return (m, key, sig)
+
+
+instance Arbitrary SecKey where
+    arbitrary = gen_key
+      where
+        valid_bs = bs_gen `suchThat` isJust
+        bs_gen = importSecKey . BS.pack <$> replicateM 32 arbitraryBoundedRandom
+        gen_key = fromJust <$> valid_bs

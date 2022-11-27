@@ -6,8 +6,8 @@ module Bitcoin.Transaction.TaprootSpec (spec) where
 
 import Bitcoin (
     MAST (..),
-    PubKey,
     PubKeyI (PubKeyI),
+    PubKeyXY,
     ScriptOutput,
     ScriptPathData (..),
     TaprootOutput (TaprootOutput),
@@ -112,7 +112,7 @@ testControlBlocks testData = do
     checkVerification = assertBool "Script verifies" . verifyScriptPathData theOutputKey
 
 
-keyParity :: PubKey -> Word8
+keyParity :: PubKeyXY -> Word8
 keyParity key = case BS.unpack . runPutS . serialize $ PubKeyI key True of
     0x02 : _ -> 0x00
     _ -> 0x01
@@ -153,7 +153,7 @@ instance FromJSON SpkGiven where
 data SpkIntermediary = SpkIntermediary
     { spkiLeafHashes :: Maybe [ByteString]
     , spkiMerkleRoot :: Maybe ByteString
-    , spkiTweakedPubKey :: PubKey
+    , spkiTweakedPubKey :: PubKeyXY
     }
 
 

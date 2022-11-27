@@ -39,12 +39,12 @@ spec = do
         prop "encoded signature is canonical" $
             forAll arbitrarySignature $
                 testIsCanonical . lst3
-        prop "decodeStrictSig . exportSig identity" $
+        prop "decodeStrictSig . exportSignatureDer identity" $
             forAll arbitrarySignature $
-                (\s -> decodeStrictSig (exportSig s) == Just s) . lst3
-        prop "importSig . exportSig identity" $
+                (\s -> decodeStrictSig (exportSignatureDer s) == Just s) . lst3
+        prop "importSignature . exportSignatureDer identity" $
             forAll arbitrarySignature $
-                (\s -> importSig (exportSig s) == Just s) . lst3
+                (\s -> importSignature (exportSignatureDer s) == Just s) . lst3
         prop "getSig . putSig identity" $
             forAll arbitrarySignature $
                 (\s -> runGet getSig (runPut $ putSig s) == Right s) . lst3
@@ -65,7 +65,7 @@ spec = do
 
 -- github.com/bitcoin/bitcoin/blob/master/src/script.cpp
 -- from function IsCanonicalSignature
-testIsCanonical :: Sig -> Bool
+testIsCanonical :: Signature -> Bool
 testIsCanonical sig =
     not $
         -- Non-canonical signature: too short
@@ -116,7 +116,7 @@ testIsCanonical sig =
                 && not (testBit (BS.index s (fromIntegral rlen + 7)) 7)
             )
   where
-    s = exportSig sig
+    s = exportSignatureDer sig
     len = fromIntegral $ BS.length s
     rlen = BS.index s 3
     slen = BS.index s (fromIntegral rlen + 5)
@@ -125,7 +125,7 @@ testIsCanonical sig =
 -- RFC6979 note: Different libraries of libsecp256k1 use different constants
 -- to produce a nonce. Thus, their deterministric signatures will be different.
 -- We still want to test against fixed signatures so we need a way to switch
--- between implementations. We check the output of signMsg 1 0
+-- between implementations. We check the output of ecdsaSign 1 0
 
 data ValidImpl
     = ImplCore
@@ -135,10 +135,11 @@ data ValidImpl
 implSig :: Text
 implSig =
     encodeHex $
-        exportSig $
-            signMsg
-                "0000000000000000000000000000000000000000000000000000000000000001"
-                "0000000000000000000000000000000000000000000000000000000000000000"
+        exportSignatureDer $
+            fromJust $
+                ecdsaSign
+                    "0000000000000000000000000000000000000000000000000000000000000001"
+                    (BS.replicate 32 0)
 
 
 -- We have test vectors for these cases
@@ -183,18 +184,18 @@ checkDistSig go =
 -- github.com/trezor/python-ecdsa/blob/master/ecdsa/test_pyecdsa.py
 
 toVector :: (Text, Text, Text) -> (SecKey, ByteString, Text)
-toVector (prv, m, res) = (fromJust $ (secKey <=< decodeHex) prv, cs m, res)
+toVector (prv, m, res) = (fromJust $ (importSecKey <=< decodeHex) prv, cs m, res)
 
 
 testRFC6979Vector :: (SecKey, ByteString, Text) -> Assertion
 testRFC6979Vector (prv, m, res) = do
-    assertEqual "RFC 6979 Vector" res (encodeHex $ encode $ exportCompactSig s)
+    assertEqual "RFC 6979 Vector" res (encodeHex $ exportSignatureCompact s)
     assertBool "Signature is valid" $ verifyHashSig h s (derivePubKey prv)
     assertBool "Signature is canonical" $ testIsCanonical s
     assertBool "Signature is normalized" $ isCanonicalHalfOrder s
   where
     h = sha256 m
-    s = signHash prv h
+    s = fromJust $ signHash prv h
 
 
 -- Test vectors from:
@@ -202,13 +203,13 @@ testRFC6979Vector (prv, m, res) = do
 
 testRFC6979DERVector :: (SecKey, ByteString, Text) -> Assertion
 testRFC6979DERVector (prv, m, res) = do
-    assertEqual "RFC 6979 DER Vector" res (encodeHex $ exportSig s)
+    assertEqual "RFC 6979 DER Vector" res (encodeHex $ exportSignatureDer s)
     assertBool "DER Signature is valid" $ verifyHashSig h s (derivePubKey prv)
     assertBool "DER Signature is canonical" $ testIsCanonical s
     assertBool "DER Signature is normalized" $ isCanonicalHalfOrder s
   where
     h = sha256 m
-    s = signHash prv h
+    s = fromJust $ signHash prv h
 
 
 -- Reproduce the P2WPKH example from BIP 143
@@ -457,7 +458,7 @@ testBip143p2shp2wpkhMulsig =
 
 
 secHexKey :: Text -> Maybe SecKey
-secHexKey = decodeHex >=> secKey
+secHexKey = decodeHex >=> importSecKey
 
 
 toPubKey :: SecKey -> PubKeyI

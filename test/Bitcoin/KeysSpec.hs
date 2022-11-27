@@ -68,7 +68,7 @@ spec = do
     describe "Bitcoin core vectors /src/test/key_tests.cpp" $ do
         it "Passes WIF decoding tests" testPrivkey
         it "Passes SecKey compression tests" testPrvKeyCompressed
-        it "Passes PubKey compression tests" testKeyCompressed
+        it "Passes PubKeyXY compression tests" testKeyCompressed
         it "Passes address matching tests" testMatchingAddress
         it "Passes signature verification" testSigs
         it "Passes deterministic signing tests" testDetSigning
@@ -221,10 +221,10 @@ sigMsg =
 
 testSignature :: Hash256 -> Assertion
 testSignature h = do
-    let sign1 = signHash (secKeyData sec1) h
-        sign2 = signHash (secKeyData sec2) h
-        sign1C = signHash (secKeyData sec1C) h
-        sign2C = signHash (secKeyData sec2C) h
+    let sign1 = fromJust $ signHash (secKeyData sec1) h
+        sign2 = fromJust $ signHash (secKeyData sec2) h
+        sign1C = fromJust $ signHash (secKeyData sec1C) h
+        sign2C = fromJust $ signHash (secKeyData sec2C) h
     assertBool "Key 1, Sign1" $ verifyHashSig h sign1 (pubKeyPoint pub1)
     assertBool "Key 1, Sign2" $ not $ verifyHashSig h sign2 (pubKeyPoint pub1)
     assertBool "Key 1, Sign1C" $ verifyHashSig h sign1C (pubKeyPoint pub1)

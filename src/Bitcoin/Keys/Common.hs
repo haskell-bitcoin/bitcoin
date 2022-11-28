@@ -31,23 +31,40 @@ module Bitcoin.Keys.Common (
     toWif,
 ) where
 
-import Bitcoin.Address.Base58
-import Bitcoin.Crypto.Hash
-import Bitcoin.Data
-import Bitcoin.Util
-import Control.DeepSeq
+import Bitcoin.Address.Base58 (
+    Base58,
+    decodeBase58Check,
+    encodeBase58Check,
+ )
+import Bitcoin.Crypto.Hash (Hash256, sha256)
+import Bitcoin.Data (Network (getSecretPrefix))
+import Bitcoin.Util (decodeHex, eitherToMaybe)
+import qualified Bitcoin.Util as U
+import Control.DeepSeq (NFData)
 import Control.Monad (guard, mzero, (<=<))
-import Crypto.Secp256k1
+import Crypto.Hash (hashWith)
+import Crypto.Hash.Algorithms (SHA256 (SHA256))
+import Crypto.Secp256k1 (
+    PubKeyXY,
+    SecKey (..),
+    derivePubKey,
+    exportPubKeyXY,
+    exportSecKey,
+    importPubKeyXY,
+    importSecKey,
+    importTweak,
+    pubKeyTweakAdd,
+    secKeyTweakAdd,
+ )
 import Data.Binary (Binary (..))
+import Data.Binary.Get (getByteString, getWord8, lookAhead)
+import Data.Binary.Put (putByteString)
+import qualified Data.ByteArray as BA
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.ByteString.Builder (char7)
-import Data.Bytes.Get
-import Data.Bytes.Put
-import Data.Bytes.Serial
-import Data.Hashable
+import qualified Data.ByteString.Lazy as BSL
+import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (Serialize (..))
 import Data.String (IsString, fromString)
 import Data.String.Conversions (cs)
 import GHC.Generics (Generic)
@@ -63,13 +80,13 @@ data PubKeyI = PubKeyI
 
 instance IsString PubKeyI where
     fromString str =
-        fromMaybe e $ eitherToMaybe . runGetS deserialize <=< decodeHex $ cs str
+        fromMaybe e $ eitherToMaybe . U.decode . BSL.fromStrict =<< decodeHex (cs str)
       where
         e = error "Could not decode public key"
 
 
-instance Serial PubKeyI where
-    deserialize =
+instance Binary PubKeyI where
+    get =
         s >>= \case
             True -> c
             False -> u
@@ -91,17 +108,7 @@ instance Serial PubKeyI where
                 PubKeyI <$> importPubKeyXY bs <*> pure False
 
 
-    serialize pk = putByteString $ exportPubKeyXY (pubKeyCompressed pk) (pubKeyPoint pk)
-
-
-instance Serialize PubKeyI where
-    put = serialize
-    get = deserialize
-
-
-instance Binary PubKeyI where
-    put = serialize
-    get = deserialize
+    put pk = putByteString $ (exportPubKeyXY <$> pubKeyCompressed <*> pubKeyPoint) pk
 
 
 -- | Wrap a public key from secp256k1 library adding information about compression.
@@ -117,7 +124,7 @@ derivePubKeyI (SecKeyI d c) = PubKeyI (derivePubKey d) c
 
 -- | Tweak a public key.
 tweakPubKey :: PubKeyXY -> Hash256 -> Maybe PubKeyXY
-tweakPubKey p h = pubKeyTweakAdd p =<< importTweak (runPutS (serialize h))
+tweakPubKey p = pubKeyTweakAdd p <=< importTweak . U.encodeS
 
 
 -- | Elliptic curve private key type with expected public key compression
@@ -138,16 +145,16 @@ wrapSecKey c d = SecKeyI d c
 
 -- | Tweak a private key.
 tweakSecKey :: SecKey -> Hash256 -> Maybe SecKey
-tweakSecKey key h = secKeyTweakAdd key =<< importTweak (runPutS (serialize h))
+tweakSecKey key = secKeyTweakAdd key <=< importTweak . U.encodeS
 
 
 -- | Decode Casascius mini private keys (22 or 30 characters).
 fromMiniKey :: ByteString -> Maybe SecKeyI
 fromMiniKey bs = do
     guard checkShortKey
-    wrapSecKey False <$> importSecKey (runPutS (serialize (sha256 bs)))
+    wrapSecKey False <$> (importSecKey . BA.convert . hashWith SHA256) bs
   where
-    checkHash = runPutS $ serialize $ sha256 $ bs `BS.append` "?"
+    checkHash = BA.convert . hashWith SHA256 $ bs `BS.append` "?"
     checkShortKey = BS.length bs `elem` [22, 30] && BS.head checkHash == 0x00
 
 
@@ -156,14 +163,14 @@ fromWif :: Network -> Base58 -> Maybe SecKeyI
 fromWif net wif = do
     bs <- decodeBase58Check wif
     -- Check that this is a private key
-    guard (BS.head bs == getSecretPrefix net)
-    case BS.length bs of
+    guard (BSL.head bs == getSecretPrefix net)
+    case BSL.length bs of
         -- Uncompressed format
-        33 -> wrapSecKey False <$> importSecKey (BS.tail bs)
+        33 -> wrapSecKey False <$> (importSecKey . BSL.toStrict) (BSL.tail bs)
         -- Compressed format
         34 -> do
-            guard $ BS.last bs == 0x01
-            wrapSecKey True <$> importSecKey (BS.tail $ BS.init bs)
+            guard $ BSL.last bs == 0x01
+            wrapSecKey True <$> (importSecKey . BS.tail . BS.init . BSL.toStrict) bs
         -- Bad length
         _ -> Nothing
 
@@ -171,7 +178,7 @@ fromWif net wif = do
 -- | Encode private key into a WIF string.
 toWif :: Network -> SecKeyI -> Base58
 toWif net (SecKeyI k c) =
-    encodeBase58Check . BS.cons (getSecretPrefix net) $
+    encodeBase58Check . BSL.cons (getSecretPrefix net) . BSL.fromStrict $
         if c
             then exportSecKey k `BS.snoc` 0x01
             else exportSecKey k

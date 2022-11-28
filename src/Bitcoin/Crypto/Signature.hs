@@ -16,18 +16,26 @@ module Bitcoin.Crypto.Signature (
     decodeStrictSig,
 ) where
 
-import Bitcoin.Crypto.Hash
+import Bitcoin.Crypto.Hash (Hash256 (getHash256))
+import qualified Bitcoin.Util as U
 import Control.Monad (guard, unless, when)
-import Crypto.Secp256k1
-import Data.Binary (Binary (..))
+import Crypto.Secp256k1 (
+    PubKeyXY,
+    SecKey,
+    Signature,
+    ecdsaSign,
+    ecdsaVerify,
+    exportSignatureCompact,
+    exportSignatureDer,
+    importSignatureDer,
+    normalizeSignature,
+ )
+import Data.Binary.Get (Get, getByteString, getWord8, lookAhead)
+import Data.Binary.Put (Put, putByteString)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (fromShort)
-import Data.Bytes.Get
-import Data.Bytes.Put
-import Data.Bytes.Serial
 import Data.Maybe (fromMaybe, isNothing)
-import Data.Serialize (Serialize (..))
 import Numeric (showHex)
 
 
@@ -44,7 +52,7 @@ verifyHashSig h s p = ecdsaVerify (fromShort $ getHash256 h) p norm
 
 
 -- | Deserialize an ECDSA signature as commonly encoded in Bitcoin.
-getSig :: MonadGet m => m Signature
+getSig :: Get Signature
 getSig = do
     l <-
         lookAhead $ do
@@ -64,7 +72,7 @@ getSig = do
 
 
 -- | Serialize an ECDSA signature for Bitcoin use.
-putSig :: MonadPut m => Signature -> m ()
+putSig :: Signature -> Put
 putSig s = putByteString $ exportSignatureDer s
 
 

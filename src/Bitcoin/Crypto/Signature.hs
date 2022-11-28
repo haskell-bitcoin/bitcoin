@@ -35,7 +35,6 @@ import Data.Binary.Put (Put, putByteString)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (fromShort)
-import Data.Maybe (fromMaybe, isNothing)
 import Numeric (showHex)
 
 
@@ -48,7 +47,7 @@ signHash k = ecdsaSign k . fromShort . getHash256
 verifyHashSig :: Hash256 -> Signature -> PubKeyXY -> Bool
 verifyHashSig h s p = ecdsaVerify (fromShort $ getHash256 h) p norm
   where
-    norm = fromMaybe s (normalizeSignature s)
+    norm = snd $ normalizeSignature s
 
 
 -- | Deserialize an ECDSA signature as commonly encoded in Bitcoin.
@@ -78,7 +77,7 @@ putSig s = putByteString $ exportSignatureDer s
 
 -- | Is canonical half order.
 isCanonicalHalfOrder :: Signature -> Bool
-isCanonicalHalfOrder = isNothing . normalizeSignature
+isCanonicalHalfOrder = not . fst . normalizeSignature
 
 
 -- | Decode signature strictly.

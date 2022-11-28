@@ -21,14 +21,14 @@ packages:
 - completed:
     name: libsecp256k1
     pantry-tree:
-      sha256: 24162195ea5461190b4ea63c015b798d8a281c31fb7e5d57e390b4086873bee2
+      sha256: e81e2a02eb41c57005a7bfeacbd54b29f8395667ddb912c2c9fae377f4791efa
       size: 1259
-    sha256: 52a1f9e8c82db503ba7c0f2482193d44822e888b11b8a6f6575865c8e895c792
-    size: 30251
-    url: https://github.com/tochicool/libsecp256k1-haskell/archive/2688e0b86dbbc81a9eb117af3f3a078c84e1c2ef.tar.gz
+    sha256: 853107597d46f48b7ebb010bae145147db624ddd149f96fdcb23a0aafc59f47e
+    size: 30221
+    url: https://github.com/tochicool/libsecp256k1-haskell/archive/3a23ec0d8616bd3cc45e3b5764f604c4bed2e144.tar.gz
     version: 0.1.0
   original:
-    url: https://github.com/tochicool/libsecp256k1-haskell/archive/2688e0b86dbbc81a9eb117af3f3a078c84e1c2ef.tar.gz
+    url: https://github.com/tochicool/libsecp256k1-haskell/archive/3a23ec0d8616bd3cc45e3b5764f604c4bed2e144.tar.gz
 snapshots:
 - completed:
     sha256: 1ecad1f0bd2c27de88dbff6572446cfdf647c615d58a7e2e2085c6b7dfc04176

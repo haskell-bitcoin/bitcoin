@@ -30,7 +30,7 @@ module Bitcoin.Script.SigHash (
 
 import Bitcoin.Crypto (
     Hash256,
-    Sig,
+    Signature,
     decodeStrictSig,
     putSig,
  )
@@ -293,7 +293,7 @@ txSigHashSegwitV0 _ tx out v i sh =
 -- transaction inputs are of type 'TxSignature'.
 data TxSignature
     = TxSignature
-        { txSignature :: !Sig
+        { txSignature :: !Signature
         , txSignatureSigHash :: !SigHash
         }
     | TxSignatureEmpty

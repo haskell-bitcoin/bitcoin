@@ -131,7 +131,7 @@ signInput ::
     SecKeyI ->
     Either String Tx
 signInput net tx i (sigIn@(SigInput so val _ _ rdmM), nest) key = do
-    let sig = makeSignature net tx i sigIn key
+    sig <- maybe (Left "cannot sign input") return $ makeSignature net tx i sigIn key
     si <- buildInput net tx i so val rdmM sig $ derivePubKeyI key
     w <- updatedWitnessData tx i so si
     return
@@ -269,9 +269,9 @@ parseExistingSigs net tx so i = insSigs <> witSigs
 
 
 -- | Produce a structured representation of a deterministic (RFC-6979) signature over an input.
-makeSignature :: Network -> Tx -> Int -> SigInput -> SecKeyI -> TxSignature
+makeSignature :: Network -> Tx -> Int -> SigInput -> SecKeyI -> Maybe TxSignature
 makeSignature net tx i (SigInput so val _ sh rdmM) key =
-    TxSignature (signHash (secKeyData key) m) sh
+    TxSignature <$> signHash (secKeyData key) m <*> pure sh
   where
     m = makeSigHash net tx i so val sh rdmM
 

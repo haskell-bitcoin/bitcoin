@@ -358,10 +358,14 @@ onPrevTxOut net signer tx ix input prevTxData =
         { partialSigs = newSigs <> partialSigs input
         }
   where
-    newSigs = HM.mapWithKey sigForInput sigKeys
+    newSigs = HM.foldMapWithKey sigForInput sigKeys
     sigForInput thePubKey theSecKey =
-        encodeTxSig . makeSignature net tx ix theSigInput $
-            SecKeyI theSecKey (pubKeyCompressed thePubKey)
+        maybe
+            mempty
+            (HM.singleton thePubKey . encodeTxSig)
+            ( makeSignature net tx ix theSigInput $
+                SecKeyI theSecKey (pubKeyCompressed thePubKey)
+            )
 
     theSigInput =
         SigInput

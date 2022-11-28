@@ -15,16 +15,16 @@ module Bitcoin.Keys.Common (
     -- * Public & Private Keys
     PubKeyI (..),
     SecKeyI (..),
-    exportPubKey,
-    importPubKey,
+    exportPubKeyXY,
+    importPubKeyXY,
     wrapPubKey,
     derivePubKeyI,
     wrapSecKey,
     fromMiniKey,
     tweakPubKey,
     tweakSecKey,
-    getSecKey,
-    secKey,
+    exportSecKey,
+    importSecKey,
 
     -- ** Private Key Wallet Import Format (WIF)
     fromWif,
@@ -45,15 +45,16 @@ import Control.Monad (guard, mzero, (<=<))
 import Crypto.Hash (hashWith)
 import Crypto.Hash.Algorithms (SHA256 (SHA256))
 import Crypto.Secp256k1 (
-    PubKey,
+    PubKeyXY,
     SecKey (..),
     derivePubKey,
-    exportPubKey,
-    importPubKey,
-    secKey,
-    tweak,
-    tweakAddPubKey,
-    tweakAddSecKey,
+    exportPubKeyXY,
+    exportSecKey,
+    importPubKeyXY,
+    importSecKey,
+    importTweak,
+    pubKeyTweakAdd,
+    secKeyTweakAdd,
  )
 import Data.Binary (Binary (..))
 import Data.Binary.Get (getByteString, getWord8, lookAhead)
@@ -71,7 +72,7 @@ import GHC.Generics (Generic)
 
 -- | Elliptic curve public key type with expected serialized compression flag.
 data PubKeyI = PubKeyI
-    { pubKeyPoint :: !PubKey
+    { pubKeyPoint :: !PubKeyXY
     , pubKeyCompressed :: !Bool
     }
     deriving (Generic, Eq, Show, Read, Hashable, NFData)
@@ -100,18 +101,18 @@ instance Binary PubKeyI where
         c = do
             bs <- getByteString 33
             maybe (fail "Could not decode public key") return $
-                PubKeyI <$> importPubKey bs <*> pure True
+                PubKeyI <$> importPubKeyXY bs <*> pure True
         u = do
             bs <- getByteString 65
             maybe (fail "Could not decode public key") return $
-                PubKeyI <$> importPubKey bs <*> pure False
+                PubKeyI <$> importPubKeyXY bs <*> pure False
 
 
-    put pk = putByteString $ (exportPubKey <$> pubKeyCompressed <*> pubKeyPoint) pk
+    put pk = putByteString $ (exportPubKeyXY <$> pubKeyCompressed <*> pubKeyPoint) pk
 
 
 -- | Wrap a public key from secp256k1 library adding information about compression.
-wrapPubKey :: Bool -> PubKey -> PubKeyI
+wrapPubKey :: Bool -> PubKeyXY -> PubKeyI
 wrapPubKey c p = PubKeyI p c
 
 
@@ -122,8 +123,8 @@ derivePubKeyI (SecKeyI d c) = PubKeyI (derivePubKey d) c
 
 
 -- | Tweak a public key.
-tweakPubKey :: PubKey -> Hash256 -> Maybe PubKey
-tweakPubKey p = tweakAddPubKey p <=< tweak . U.encodeS
+tweakPubKey :: PubKeyXY -> Hash256 -> Maybe PubKeyXY
+tweakPubKey p = pubKeyTweakAdd p <=< importTweak . U.encodeS
 
 
 -- | Elliptic curve private key type with expected public key compression
@@ -144,14 +145,14 @@ wrapSecKey c d = SecKeyI d c
 
 -- | Tweak a private key.
 tweakSecKey :: SecKey -> Hash256 -> Maybe SecKey
-tweakSecKey key = tweakAddSecKey key <=< tweak . U.encodeS
+tweakSecKey key = secKeyTweakAdd key <=< importTweak . U.encodeS
 
 
 -- | Decode Casascius mini private keys (22 or 30 characters).
 fromMiniKey :: ByteString -> Maybe SecKeyI
 fromMiniKey bs = do
     guard checkShortKey
-    wrapSecKey False <$> (secKey . BA.convert . hashWith SHA256) bs
+    wrapSecKey False <$> (importSecKey . BA.convert . hashWith SHA256) bs
   where
     checkHash = BA.convert . hashWith SHA256 $ bs `BS.append` "?"
     checkShortKey = BS.length bs `elem` [22, 30] && BS.head checkHash == 0x00
@@ -165,11 +166,11 @@ fromWif net wif = do
     guard (BSL.head bs == getSecretPrefix net)
     case BSL.length bs of
         -- Uncompressed format
-        33 -> wrapSecKey False <$> (secKey . BSL.toStrict) (BSL.tail bs)
+        33 -> wrapSecKey False <$> (importSecKey . BSL.toStrict) (BSL.tail bs)
         -- Compressed format
         34 -> do
             guard $ BSL.last bs == 0x01
-            wrapSecKey True <$> (secKey . BS.tail . BS.init . BSL.toStrict) bs
+            wrapSecKey True <$> (importSecKey . BS.tail . BS.init . BSL.toStrict) bs
         -- Bad length
         _ -> Nothing
 
@@ -179,5 +180,5 @@ toWif :: Network -> SecKeyI -> Base58
 toWif net (SecKeyI k c) =
     encodeBase58Check . BSL.cons (getSecretPrefix net) . BSL.fromStrict $
         if c
-            then getSecKey k `BS.snoc` 0x01
-            else getSecKey k
+            then exportSecKey k `BS.snoc` 0x01
+            else exportSecKey k

@@ -4,7 +4,7 @@ module Bitcoin.ScriptSpec (spec) where
 
 import Bitcoin.Address (addrToText, payToScriptAddress)
 import Bitcoin.Constants (Network (getNetworkName), btc)
-import Bitcoin.Keys (derivePubKeyI, secKey, wrapSecKey)
+import Bitcoin.Keys (derivePubKeyI, importSecKey, wrapSecKey)
 import Bitcoin.Orphans ()
 import Bitcoin.Script (
     Script (Script),
@@ -179,7 +179,7 @@ standardSpec net = do
                 derivePubKeyI $
                     wrapSecKey True $
                         fromJust $
-                            secKey $
+                            importSecKey $
                                 BS.replicate 32 1
         decodeInput net (Script [OP_0, opPushData $ U.encodeS pk])
             `shouldBe` Right (RegularInput (SpendPKHash TxSignatureEmpty pk))

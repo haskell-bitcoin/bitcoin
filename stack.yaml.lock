@@ -18,6 +18,17 @@ packages:
       size: 23323
   original:
     hackage: cryptonite-0.30
+- completed:
+    name: libsecp256k1
+    pantry-tree:
+      sha256: e81e2a02eb41c57005a7bfeacbd54b29f8395667ddb912c2c9fae377f4791efa
+      size: 1259
+    sha256: 853107597d46f48b7ebb010bae145147db624ddd149f96fdcb23a0aafc59f47e
+    size: 30221
+    url: https://github.com/tochicool/libsecp256k1-haskell/archive/3a23ec0d8616bd3cc45e3b5764f604c4bed2e144.tar.gz
+    version: 0.1.0
+  original:
+    url: https://github.com/tochicool/libsecp256k1-haskell/archive/3a23ec0d8616bd3cc45e3b5764f604c4bed2e144.tar.gz
 snapshots:
 - completed:
     sha256: 1ecad1f0bd2c27de88dbff6572446cfdf647c615d58a7e2e2085c6b7dfc04176

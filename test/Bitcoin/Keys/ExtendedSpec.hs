@@ -17,8 +17,8 @@ import Bitcoin.Keys (
     derivePath,
     derivePubPath,
     deriveXPubKey,
-    exportPubKey,
-    getSecKey,
+    exportPubKeyXY,
+    exportSecKey,
     getXPrvKey,
     getXPubKey,
     hardSubKey,
@@ -451,10 +451,10 @@ runVector m v = do
     assertBool "bip44Addr" $
         addrToText btc (xPubAddr $ deriveXPubKey $ derivePath bip44Addr m)
             == Just (v !! 3)
-    assertBool "prvKey" $ encodeHex (getSecKey $ xPrvKey m) == v !! 4
+    assertBool "prvKey" $ encodeHex (exportSecKey $ xPrvKey m) == v !! 4
     assertBool "xPrvWIF" $ xPrvWif btc m == v !! 5
     assertBool "pubKey" $
-        encodeHex (exportPubKey True $ xPubKey $ deriveXPubKey m) == v !! 6
+        encodeHex (exportPubKeyXY True $ xPubKey $ deriveXPubKey m) == v !! 6
     assertBool "chain code" $ encodeHex (U.encodeS $ xPrvChain m) == v !! 7
     assertBool "Hex PubKey" $
         (encodeHex . BSL.toStrict . runPut . putXPubKey btc) (deriveXPubKey m) == v !! 8

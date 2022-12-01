@@ -1,0 +1,28 @@
+name: bitcoin-bench
+version: 0.1.0
+synopsis: Bitcoin benchmark library for Haskell
+description: Please see the README on GitHub at <https://github.com/haskell-bitcoin/bitcoin#readme>
+category: Bitcoin, Finance, Network
+author:
+  - Philippe Laprade
+  - Jean-Pierre Rupp
+  - Matthew Wraith
+  - Keagan McClelland
+maintainer: keagan.mcclelland@gmail.com
+license: BSD3
+homepage: http://github.com/haskell-bitcoin/bitcoin#readme
+git: git://github.com/haskell-bitcoin/bitcoin.git
+bug-reports: http://github.com/haskell-bitcoin/bitcoin/issues
+extra-source-files:
+  - ./data/*.dat # raw data for benchmarks
+benchmarks:
+  benchmark:
+    main: Main.hs
+    dependencies:
+      - bitcoin
+      - criterion >=1.5 && <1.7
+      - base >=4.9 && <5
+      - binary >= 0.8.8
+      - bytestring >= 0.10.10.0
+      - deepseq >= 1.4.4.0
+      - text >= 1.2.3.0

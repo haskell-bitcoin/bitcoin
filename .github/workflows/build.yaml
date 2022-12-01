@@ -12,8 +12,8 @@ on:
       - package.yaml
       - stack.yaml
       - stack.yaml.lock
-      - "src/**/*.hs"
-      - "test/**/*.hs"
+      - "bitcoin/**/*.hs"
+      - "bitcoin-test/**/*.hs"
       - ".github/workflows/build.yaml"
     types:
       - synchronize
@@ -27,14 +27,13 @@ on:
       - package.yaml
       - stack.yaml
       - stack.yaml.lock
-      - "src/**/*.hs"
-      - "test/**/*.hs"
+      - "bitcoin/**/*.hs"
+      - "bitcoin-test/**/*.hs"
       - ".github/workflows/build.yaml"
   workflow_dispatch:
     inputs: {}
 
 jobs:
-
   build:
     strategy:
       fail-fast: false

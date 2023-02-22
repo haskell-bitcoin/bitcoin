@@ -12,8 +12,9 @@ on:
     paths:
       - stack.yaml
       - .hlint.yaml
-      - "src/**/*.hs"
-      - "test/**/*.hs"
+      - "bitcoin/**/*.hs"
+      - "bitcoin-test/**/*.hs"
+      - "bitcoin-bench/**/*.hs"
       - ".github/workflows/hlint.yaml"
     types:
       - synchronize
@@ -26,8 +27,8 @@ on:
     paths:
       - stack.yaml
       - .hlint.yaml
-      - "src/**/*.hs"
-      - "test/**/*.hs"
+      - "bitcoin/**/*.hs"
+      - "bitcoin-test/**/*.hs"
       - ".github/workflows/hlint.yaml"
   workflow_dispatch:
     inputs: {}
@@ -39,14 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: 'Set up HLint'
+      - name: "Set up HLint"
         uses: haskell/actions/hlint-setup@v2
         with:
-          version: '3.5'
+          version: "3.5"
 
-      - name: 'Run HLint'
+      - name: "Run HLint"
         uses: haskell/actions/hlint-run@v2
         with:
           # For some reason this has to be a string containing JSON rather than a YAML sequence
-          path: '[ "src/", "test/"]'
+          path: '[ "bitcoin/", "bitcoin-test/", "bitcoin-bench/" ]'
           fail-on: warning

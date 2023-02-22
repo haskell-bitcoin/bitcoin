@@ -1,10 +1,12 @@
 cradle:
   stack:
-    - path: "./src"
+    - path: "./bitcoin/src"
       component: "bitcoin:lib"
 
-    - path: "./test"
-      component: "bitcoin:test:spec"
+    - path: "./bitcoin-test/lib"
+      component: "bitcoin-test:lib"
+    - path: "./bitcoin-test/exec/Spec.hs"
+      component: "bitcoin-test:test:spec"
 
-    - path: "./benchmark"
-      component: "bitcoin:bench:benchmark"
+    - path: "./bitcoin-bench"
+      component: "bitcoin-bench:bench:benchmark"

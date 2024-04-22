@@ -10,7 +10,6 @@
 -- This module provides support for reperesenting full taproot outputs and parsing
 -- taproot witnesses.  For reference see BIPS 340, 341, and 342.
 module Bitcoin.Transaction.Taproot (
-    XOnlyPubKey (..),
     TapLeafVersion,
     MAST (..),
     mastCommitment,
@@ -25,7 +24,7 @@ module Bitcoin.Transaction.Taproot (
     verifyScriptPathData,
 ) where
 
-import Bitcoin.Crypto (PubKey, initTaggedHash, tweak, tweakAddPubKey)
+import Bitcoin.Crypto (PubKeyXO, PubKeyXY, exportPubKeyXO, importTweak, initTaggedHash, pubKeyTweakAdd, pubKeyXOTweakAdd, xyToXO)
 import Bitcoin.Keys.Common (PubKeyI (PubKeyI), pubKeyPoint)
 import Bitcoin.Network.Common (VarInt (VarInt))
 import Bitcoin.Script.Common (Script)
@@ -42,6 +41,7 @@ import Crypto.Hash (
     hashUpdate,
     hashUpdates,
  )
+import Crypto.Secp256k1 (exportPubKeyXY, importPubKeyXO, importPubKeyXY)
 import Data.Binary (Binary (..))
 import qualified Data.Binary as Bin
 import Data.Binary.Get (getByteString, getLazyByteString, getWord8)
@@ -58,36 +58,12 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Word (Word8)
 
 
--- | An x-only pubkey corresponds to the keys @(x,y)@ and @(x, -y)@.  The
---equality test only checks the x-coordinate.  An x-only pubkey serializes to 32
---bytes.
-newtype XOnlyPubKey = XOnlyPubKey {xOnlyPubKey :: PubKey}
-    deriving (Show)
-
-
-instance Eq XOnlyPubKey where
-    (==) = (==) `on` Bin.encode
-
-
-instance Binary XOnlyPubKey where
-    put (XOnlyPubKey pk) =
-        putLazyByteString
-            . BSL.drop 1
-            . Bin.encode
-            $ PubKeyI pk True
-    get =
-        either fail (pure . XOnlyPubKey . pubKeyPoint)
-            . U.decode
-            . BSL.cons 0x02
-            =<< getLazyByteString 32
-
-
 type TapLeafVersion = Word8
 
 
 -- | Merklized Abstract Syntax Tree.  This type can represent trees where only a
---subset of the leaves are known.  Note that the tree is invariant under swapping
---branches at an internal node.
+-- subset of the leaves are known.  Note that the tree is invariant under swapping
+-- branches at an internal node.
 data MAST
     = MASTBranch MAST MAST
     | MASTLeaf TapLeafVersion Script
@@ -96,7 +72,7 @@ data MAST
 
 
 -- | Get the inclusion proofs for the leaves in the tree.  The proof is ordered
---leaf-to-root.
+-- leaf-to-root.
 getMerkleProofs :: MAST -> [(TapLeafVersion, Script, [Digest SHA256])]
 getMerkleProofs = getProofs mempty
   where
@@ -145,21 +121,21 @@ leafHash leafVersion leafScript =
 
 -- | Representation of a full taproot output.
 data TaprootOutput = TaprootOutput
-    { taprootInternalKey :: PubKey
+    { taprootInternalKey :: PubKeyXO
     , taprootMAST :: Maybe MAST
     }
     deriving (Show)
 
 
-taprootOutputKey :: TaprootOutput -> PubKey
+taprootOutputKey :: TaprootOutput -> PubKeyXY
 taprootOutputKey TaprootOutput{taprootInternalKey, taprootMAST} =
-    fromMaybe keyFail $ tweak commitment >>= tweakAddPubKey taprootInternalKey
+    fromMaybe keyFail $ importTweak commitment >>= pubKeyXOTweakAdd taprootInternalKey
   where
     commitment = taprootCommitment taprootInternalKey $ mastCommitment <$> taprootMAST
     keyFail = error "bitcoin taprootOutputKey: key derivation failed"
 
 
-taprootCommitment :: PubKey -> Maybe (Digest SHA256) -> ByteString
+taprootCommitment :: PubKeyXO -> Maybe (Digest SHA256) -> ByteString
 taprootCommitment internalKey merkleRoot =
     BA.convert
         . hashFinalize
@@ -167,12 +143,12 @@ taprootCommitment internalKey merkleRoot =
         . (`hashUpdates` BSL.toChunks keyBytes)
         $ initTaggedHash "TapTweak"
   where
-    keyBytes = Bin.encode $ XOnlyPubKey internalKey
+    keyBytes = BSL.fromStrict $ exportPubKeyXO $ internalKey
 
 
 -- | Generate the output script for a taproot output
 taprootScriptOutput :: TaprootOutput -> ScriptOutput
-taprootScriptOutput = PayWitness 0x01 . U.encodeS . XOnlyPubKey . taprootOutputKey
+taprootScriptOutput = PayWitness 0x01 . exportPubKeyXO . fst . xyToXO . taprootOutputKey
 
 
 -- | Comprehension of taproot witness data
@@ -190,7 +166,7 @@ data ScriptPathData = ScriptPathData
     , scriptPathExternalIsOdd :: Bool
     , scriptPathLeafVersion :: Word8
     -- ^ This value is masked by 0xFE
-    , scriptPathInternalKey :: PubKey
+    , scriptPathInternalKey :: PubKeyXO
     , scriptPathControl :: [ByteString]
     }
     deriving (Eq, Show)
@@ -223,7 +199,10 @@ viewTaprootWitness witnessStack = case reverse witnessStack of
     deconstructControl = eitherToMaybe . U.runGet deserializeControl . BSL.fromStrict
     deserializeControl = do
         v <- getWord8
-        k <- xOnlyPubKey <$> get
+        keyBytes <- getByteString 32
+        k <- case importPubKeyXO keyBytes of
+            Nothing -> fail "Invalid PubKeyXO"
+            Just x -> pure x
         proof <- many $ getByteString 32
         pure (v, k, proof)
 
@@ -237,7 +216,7 @@ encodeTaprootWitness = \case
             <> [ U.encodeS $ scriptPathScript scriptPathData
                , mconcat
                     [ BS.pack [scriptPathLeafVersion scriptPathData .|. parity scriptPathData]
-                    , U.encodeS . XOnlyPubKey $ scriptPathInternalKey scriptPathData
+                    , exportPubKeyXO $ scriptPathInternalKey scriptPathData
                     , mconcat $ scriptPathControl scriptPathData
                     ]
                , fromMaybe mempty $ scriptPathAnnex scriptPathData
@@ -249,25 +228,27 @@ encodeTaprootWitness = \case
 -- | Verify that the script path spend is valid, except for script execution.
 verifyScriptPathData ::
     -- | Output key
-    PubKey ->
+    PubKeyXY ->
     ScriptPathData ->
     Bool
 verifyScriptPathData outputKey scriptPathData = fromMaybe False $ do
-    tweak commitment >>= fmap onComputedKey . tweakAddPubKey (scriptPathInternalKey scriptPathData)
+    tweak <- importTweak commitment
+    tweaked <- pubKeyXOTweakAdd (scriptPathInternalKey scriptPathData) tweak
+    pure $ uncurry onComputedKey . xyToXO $ tweaked
   where
-    onComputedKey computedKey =
-        XOnlyPubKey outputKey == XOnlyPubKey computedKey
-            && expectedParity == keyParity computedKey
+    onComputedKey computedKey computedParity =
+        fst (xyToXO outputKey) == computedKey
+            && expectedParity == computedParity
     commitment = taprootCommitment (scriptPathInternalKey scriptPathData) (Just merkleRoot)
     merkleRoot =
         foldl' hashBranch theLeafHash
             . mapMaybe (digestFromByteString @SHA256)
             $ scriptPathControl scriptPathData
     theLeafHash = (leafHash <$> (.&. 0xFE) . scriptPathLeafVersion <*> scriptPathScript) scriptPathData
-    expectedParity = bool 0 1 $ scriptPathExternalIsOdd scriptPathData
+    expectedParity = bool False True $ scriptPathExternalIsOdd scriptPathData
 
 
-keyParity :: PubKey -> Word8
+keyParity :: PubKeyXY -> Word8
 keyParity key = case BSL.unpack . Bin.encode $ PubKeyI key True of
     0x02 : _ -> 0x00
     _ -> 0x01

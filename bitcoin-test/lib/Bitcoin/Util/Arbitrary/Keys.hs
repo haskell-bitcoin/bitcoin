@@ -7,6 +7,7 @@ import Bitcoin.Crypto
 import Bitcoin.Keys.Common
 import Bitcoin.Keys.Extended
 import Bitcoin.Keys.Extended.Internal (Fingerprint (..))
+import Bitcoin.Orphans ()
 import Bitcoin.Util.Arbitrary.Crypto
 import Data.Bits (clearBit)
 import Data.Coerce (coerce)
@@ -92,9 +93,10 @@ arbitraryParsedPath =
 -- | Arbitrary message hash, private key, nonce and corresponding signature. The
 -- signature is generated with a random message, random private key and a random
 -- nonce.
-arbitrarySignature :: Gen (Hash256, SecKey, Sig)
+arbitrarySignature :: Gen (Hash256, SecKey, Signature)
 arbitrarySignature = do
     m <- arbitraryHash256
     key <- arbitrary
     let sig = signHash key m
+    sig <- maybe discard pure sig
     return (m, key, sig)

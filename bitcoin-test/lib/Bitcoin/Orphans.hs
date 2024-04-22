@@ -14,7 +14,9 @@ import Bitcoin (
     OutPoint (OutPoint),
     ParsedPath (..),
     PubKeyI,
+    PubKeyXO,
     ScriptOutput,
+    SecKey,
     SigHash (..),
     SigInput (SigInput),
     SoftPath,
@@ -22,7 +24,6 @@ import Bitcoin (
     TxHash,
     TxIn (TxIn),
     TxOut (TxOut),
-    XOnlyPubKey,
     blockHashToHex,
     decodeHex,
     decodeOutputBS,
@@ -32,6 +33,8 @@ import Bitcoin (
     hexBuilder,
     hexToBlockHash,
     hexToTxHash,
+    importPubKeyXO,
+    importSecKey,
     maybeToEither,
     parseHard,
     parsePath,
@@ -57,10 +60,12 @@ import Data.Aeson (
 import Data.Aeson.Encoding (text, unsafeToEncoding)
 import qualified Data.Binary as Bin
 import Data.ByteString.Builder (char7)
+import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Maybe (maybeToList)
 import Data.Scientific (toBoundedInteger)
 import Data.String.Conversions (cs)
+import Test.QuickCheck
 
 
 instance FromJSON BlockHash where
@@ -345,8 +350,15 @@ instance FromJSON SigInput where
 
 
 -- | Hex encoding
-instance FromJSON XOnlyPubKey where
+instance FromJSON PubKeyXO where
     parseJSON =
         withText "XOnlyPubKey" $
-            either fail pure
-                . (U.decode . BSL.fromStrict <=< maybe (Left "Unable to decode hex") Right . decodeHex)
+            maybe (fail "") pure
+                . (importPubKeyXO <=< decodeHex)
+
+
+-- | Arbitrary
+instance Arbitrary SecKey where
+    arbitrary = do
+        bytes <- B8.pack <$> vectorOf 32 arbitrary
+        maybe arbitrary pure (importSecKey bytes)

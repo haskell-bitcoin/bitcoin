@@ -19,12 +19,12 @@ packages:
   original:
     hackage: cryptonite-0.30
 - completed:
-    hackage: secp256k1-haskell-0.7.0@sha256:1585601c67d7c62c698402ffe8462de216a499608521a8136d0aa15f0a03a23f,2140
+    hackage: libsecp256k1-0.2.0@sha256:1c64fa4f06a2681376263c8ce426339e32cdf30dd95b095c037505a1a351db95,2189
     pantry-tree:
-      sha256: a7726275193ac4ef14c9d97378222d3ca494524c48354edf69214513def7d48d
-      size: 599
+      sha256: 40df088f7d7b3ca61b93f08d27b0beefae6f35670fd272db69e68558df1f2d5c
+      size: 902
   original:
-    hackage: secp256k1-haskell-0.7.0
+    hackage: libsecp256k1-0.2.0
 snapshots:
 - completed:
     sha256: 1b4c2669e26fa828451830ed4725e4d406acc25a1fa24fcc039465dd13d7a575

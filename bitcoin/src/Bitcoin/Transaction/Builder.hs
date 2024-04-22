@@ -83,7 +83,7 @@ import qualified Bitcoin.Util as U
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
 import Control.Monad (foldM, unless)
-import Crypto.Secp256k1 (PubKey, SecKey)
+import Crypto.Secp256k1 (PubKeyXY, SecKey)
 import qualified Data.Binary as Bin
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -343,7 +343,7 @@ countMulSig ::
     Script ->
     Word64 ->
     Int ->
-    [PubKey] ->
+    [PubKeyXY] ->
     [TxSignature] ->
     Int
 countMulSig net tx out val i =
@@ -352,7 +352,7 @@ countMulSig net tx out val i =
     h = txSigHash net tx out val i
 
 
-countMulSig' :: (SigHash -> Hash256) -> [PubKey] -> [TxSignature] -> Int
+countMulSig' :: (SigHash -> Hash256) -> [PubKeyXY] -> [TxSignature] -> Int
 countMulSig' _ [] _ = 0
 countMulSig' _ _ [] = 0
 countMulSig' h (_ : pubs) (TxSignatureEmpty : sigs) = countMulSig' h pubs sigs

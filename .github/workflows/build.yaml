@@ -46,17 +46,17 @@ jobs:
     name: Build
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
         name: Checkout
 
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
         name: Checkout bitcoin-core/secp256k1
         with:
           repository: bitcoin-core/secp256k1
-          ref: 694ce8fb2d1fd8a3d641d7c33705691d41a2a860
+          ref: 1ad5185cd42c0636104129fcc9f6a4bf9c67cc40
           path: lib/secp256k1
 
-      - uses: haskell/actions/setup@f7b0997283589ea5a6b4f2ade6a239d70a412877
+      - uses: haskell-actions/setup@64aa5146ed5bd91f181552b8b5fbe50fbd2bd3fe
         name: Setup Haskell
         id: setup-haskell
         with:
@@ -65,7 +65,7 @@ jobs:
 
       - name: Cache
         id: cache
-        uses: actions/cache@56461b9eb0f8438fd15c7a9968e3c9ebb18ceff1
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
           path: |
             ${{ steps.setup-haskell.outputs.stack-root }}
@@ -75,14 +75,15 @@ jobs:
 
       - name: Install buildtools (MacOS)
         if: matrix.os == 'macOS-latest'
-        run: brew install automake
+        run: |
+          brew install automake libtool
 
       - name: Install libsecp256k1 (Unix)
         if: matrix.os != 'windows-latest'
         working-directory: ./lib/secp256k1
         run: |
           ./autogen.sh
-          ./configure
+          ./configure --enable-module-schnorrsig --enable-module-recovery
           make
           make check
           sudo make install
@@ -95,11 +96,15 @@ jobs:
           pacman --noconfirm -Sy msys2-keyring
           pacman --noconfirm -S mingw-w64-x86_64-pkg-config
           pacman --noconfirm -S mingw-w64-x86_64-autotools
-          ./autogen.sh
-          ./configure --prefix=/mingw64
-          make
-          make check
-          make install
+          cmake -S . -B build -G "Unix Makefiles" \
+            -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/mingw64 \
+            -DENABLE_MODULE_SCHNORRSIG=ON \
+            -DENABLE_MODULE_RECOVERY=ON
+          cmake --build build --target all
+          cmake --build build --target test
+          cmake --build build --target install
         shell: stack exec -- bash {0}
 
       - name: Install dependencies

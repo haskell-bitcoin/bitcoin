@@ -273,9 +273,10 @@ verifyStdInput net tx i so0 val
     | isSegwit so0 =
         fromRight False $ (inp == mempty &&) . verifySegwitInput so0 <$> wp so0
     | otherwise =
-        fromRight False $
-            (verifyLegacyInput so0 <$> decodeInputBS net inp)
-                <|> (nestedScriptOutput >>= \so -> verifyNestedInput so0 so <$> wp so)
+        either
+            (const (fromRight False (nestedScriptOutput >>= \so -> verifyNestedInput so0 so <$> wp so)))
+            (verifyLegacyInput so0)
+            (decodeInputBS net inp)
   where
     inp = scriptInput $ txIn tx !! i
     theTxSigHash so = S.makeSigHash net tx i so val

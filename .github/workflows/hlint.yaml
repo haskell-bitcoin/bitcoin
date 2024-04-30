@@ -38,15 +38,15 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
 
       - name: "Set up HLint"
-        uses: haskell/actions/hlint-setup@v2
+        uses: haskell-actions/hlint-setup@0b0024319753ba0c8b2fa21b7018ed252aed8181
         with:
           version: "3.5"
 
       - name: "Run HLint"
-        uses: haskell/actions/hlint-run@v2
+        uses: haskell-actions/hlint-run@96199a3357287063c67606b26d533f1acb4b6c4e
         with:
           # For some reason this has to be a string containing JSON rather than a YAML sequence
           path: '[ "bitcoin/", "bitcoin-test/", "bitcoin-bench/" ]'

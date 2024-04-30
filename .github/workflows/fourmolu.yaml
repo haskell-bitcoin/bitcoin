@@ -32,7 +32,9 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8230315d06ad95c617244d2f265d237a1682d445
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
         name: Checkout
-      - uses: fourmolu/fourmolu-action@d88033a61a1d2f04072cabd6a0bd1308d92238e4
+      - uses: haskell-actions/run-fourmolu@5a9f41fa092841e52e6c57dde5600e586fa766a4
         name: Run fourmolu
+        with:
+          version: "0.8.2.0"

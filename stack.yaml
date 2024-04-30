@@ -1,4 +1,4 @@
-resolver: lts-19.27
+resolver: lts-22.6
 system-ghc: true
 nix:
   packages:
@@ -7,6 +7,7 @@ nix:
 extra-deps:
   - fourmolu-0.8.2.0
   - cryptonite-0.30
+  - secp256k1-haskell-0.7.0
 packages:
   - ./bitcoin
   - ./bitcoin-test

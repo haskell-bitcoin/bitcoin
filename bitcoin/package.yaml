@@ -17,7 +17,7 @@ bug-reports: http://github.com/haskell-bitcoin/bitcoin/issues
 dependencies:
   - array >= 0.5.4.0
   - base >=4.9 && <5
-  - base16 >= 0.3.0.1
+  - base16 >= 1
   - binary >= 0.8.8
   - bytestring >= 0.10.10.0
   - containers >= 0.6.2.1
@@ -28,7 +28,7 @@ dependencies:
   - murmur3 >= 1.0.3
   - network >= 3.1.1.1
   - split >= 0.2.3.3
-  - secp256k1-haskell >= 0.4.0
+  - secp256k1-haskell >= 0.4.0 && < 1
   - string-conversions >= 0.4.0.1
   - text >= 1.2.3.0
   - transformers >= 0.5.6.2

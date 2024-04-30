@@ -57,6 +57,7 @@ module Bitcoin.Util (
 
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Except (ExceptT (..), except)
+import qualified Data.Base16.Types as B16
 import Data.Bifunctor (bimap)
 import Data.Binary (Binary, Get, Put)
 import qualified Data.Binary as Bin
@@ -106,21 +107,21 @@ hexBuilder = lazyByteStringHex
 
 
 encodeHex :: ByteString -> Text
-encodeHex = B16.encodeBase16
+encodeHex = B16.extractBase16 . B16.encodeBase16
 
 
 -- | Encode as string of human-readable hex characters.
 encodeHexLazy :: BSL.ByteString -> TL.Text
-encodeHexLazy = BL16.encodeBase16
+encodeHexLazy = B16.extractBase16 . BL16.encodeBase16
 
 
 decodeHex :: Text -> Maybe ByteString
-decodeHex = eitherToMaybe . B16.decodeBase16 . E.encodeUtf8
+decodeHex = eitherToMaybe . B16.decodeBase16Untyped . E.encodeUtf8
 
 
 -- | Decode string of human-readable hex characters.
 decodeHexLazy :: TL.Text -> Maybe BSL.ByteString
-decodeHexLazy = eitherToMaybe . BL16.decodeBase16 . EL.encodeUtf8
+decodeHexLazy = eitherToMaybe . BL16.decodeBase16Untyped . EL.encodeUtf8
 
 
 -- | Obtain 'Int' bits from beginning of 'ByteString'. Resulting 'ByteString'
@@ -153,7 +154,7 @@ maybeToEither err = maybe (Left err) Right
 
 
 -- | Lift a 'Maybe' computation into the 'ExceptT' monad.
-liftMaybe :: Monad m => b -> Maybe a -> ExceptT b m a
+liftMaybe :: (Monad m) => b -> Maybe a -> ExceptT b m a
 liftMaybe err = except . maybeToEither err
 
 
@@ -243,11 +244,11 @@ convertBits pad frombits tobits i = (reverse yout, rem')
 -- Serialization helpers
 --
 
-encodeS :: Binary a => a -> ByteString
+encodeS :: (Binary a) => a -> ByteString
 encodeS = BSL.toStrict . Bin.encode
 
 
-decode :: Binary a => BSL.ByteString -> Either String a
+decode :: (Binary a) => BSL.ByteString -> Either String a
 decode = bimap lst3 lst3 . Get.decodeOrFail
 
 

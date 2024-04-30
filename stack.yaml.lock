@@ -18,9 +18,16 @@ packages:
       size: 23323
   original:
     hackage: cryptonite-0.30
+- completed:
+    hackage: secp256k1-haskell-0.7.0@sha256:1585601c67d7c62c698402ffe8462de216a499608521a8136d0aa15f0a03a23f,2140
+    pantry-tree:
+      sha256: a7726275193ac4ef14c9d97378222d3ca494524c48354edf69214513def7d48d
+      size: 599
+  original:
+    hackage: secp256k1-haskell-0.7.0
 snapshots:
 - completed:
-    sha256: 1ecad1f0bd2c27de88dbff6572446cfdf647c615d58a7e2e2085c6b7dfc04176
-    size: 619403
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/27.yaml
-  original: lts-19.27
+    sha256: 1b4c2669e26fa828451830ed4725e4d406acc25a1fa24fcc039465dd13d7a575
+    size: 714100
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/6.yaml
+  original: lts-22.6

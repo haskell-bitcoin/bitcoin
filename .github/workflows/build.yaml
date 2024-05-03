@@ -98,10 +98,9 @@ jobs:
           pacman --noconfirm -S mingw-w64-x86_64-autotools
           cmake -S . -B build -G "Unix Makefiles" \
             -DCMAKE_TOOLCHAIN_FILE=../cmake/x86_64-w64-mingw32.toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=MinSizeRel \
             -DCMAKE_INSTALL_PREFIX=/mingw64 \
-            -DENABLE_MODULE_SCHNORRSIG=ON \
-            -DENABLE_MODULE_RECOVERY=ON
+            -DSECP256K1_ENABLE_MODULE_RECOVERY=ON
           cmake --build build --target all
           cmake --build build --target test
           cmake --build build --target install

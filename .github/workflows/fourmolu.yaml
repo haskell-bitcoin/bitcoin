@@ -37,4 +37,4 @@ jobs:
       - uses: haskell-actions/run-fourmolu@5a9f41fa092841e52e6c57dde5600e586fa766a4
         name: Run fourmolu
         with:
-          version: "0.8.2.0"
+          version: "0.14.0.0"

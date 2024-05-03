@@ -78,9 +78,9 @@ library
     , bytestring >=0.10.10.0
     , containers >=0.6.2.1
     , hspec >=2.7.1
+    , libsecp256k1 >=0.2.0
     , memory >=0.15.0
     , scientific >=0.3.6.2
-    , secp256k1-haskell >=0.4.0
     , string-conversions >=0.4.0.1
     , text >=1.2.3.0
     , time >=1.9.3
@@ -107,9 +107,9 @@ test-suite spec
     , bytestring >=0.10.10.0
     , containers >=0.6.2.1
     , hspec >=2.7.1
+    , libsecp256k1 >=0.2.0
     , memory >=0.15.0
     , scientific >=0.3.6.2
-    , secp256k1-haskell >=0.4.0
     , string-conversions >=0.4.0.1
     , text >=1.2.3.0
     , time >=1.9.3

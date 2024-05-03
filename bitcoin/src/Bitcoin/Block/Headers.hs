@@ -176,7 +176,7 @@ data HeaderMemory = HeaderMemory
 
 
 -- | Typeclass for block header chain storage monad.
-class Monad m => BlockHeaders m where
+class (Monad m) => BlockHeaders m where
     -- | Add a new 'BlockNode' to the chain. Does not validate.
     addBlockHeader :: BlockNode -> m ()
 
@@ -198,7 +198,7 @@ class Monad m => BlockHeaders m where
     addBlockHeaders = mapM_ addBlockHeader
 
 
-instance Monad m => BlockHeaders (StateT HeaderMemory m) where
+instance (Monad m) => BlockHeaders (StateT HeaderMemory m) where
     addBlockHeader = State.modify' . addBlockHeaderMemory
     getBlockHeader bh = getBlockHeaderMemory bh <$> State.get
     getBestBlockHeader = State.gets memoryBestHeader
@@ -255,7 +255,7 @@ addBlockToMap node =
 -- | Get the ancestor of the provided 'BlockNode' at the specified
 -- 'BlockHeight'.
 getAncestor ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     BlockHeight ->
     BlockNode ->
     m (Maybe BlockNode)
@@ -309,7 +309,7 @@ genesisNode net =
 -- | Validate a list of continuous block headers and import them to the
 -- block chain. Return 'Left' on failure with error information.
 connectBlocks ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Network ->
     -- | current time
     Timestamp ->
@@ -363,7 +363,7 @@ connectBlocks net t bhs@(bh : _) =
 -- | Block's parent. If the block header is in the store, its parent must also
 -- be there. No block header get deleted or pruned from the store.
 parentBlock ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     BlockHeader ->
     m (Maybe BlockNode)
 parentBlock bh = getBlockHeader (prevBlock bh)
@@ -372,7 +372,7 @@ parentBlock bh = getBlockHeader (prevBlock bh)
 -- | Validate and connect single block header to the block chain. Return 'Left'
 -- if fails to be validated.
 connectBlock ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Network ->
     -- | current time
     Timestamp ->
@@ -479,7 +479,7 @@ invertLowestOne height = height .&. (height - 1)
 
 -- | Get a number of parents for the provided block.
 getParents ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Int ->
     BlockNode ->
     -- | starts from immediate parent
@@ -562,7 +562,7 @@ validVersion net height version
 
 -- | Find last block with normal, as opposed to minimum difficulty (for test
 -- networks).
-lastNoMinDiff :: BlockHeaders m => Network -> BlockNode -> m BlockNode
+lastNoMinDiff :: (BlockHeaders m) => Network -> BlockNode -> m BlockNode
 lastNoMinDiff _ bn@BlockNode{nodeHeight = 0} = return bn
 lastNoMinDiff net bn@BlockNode{..} = do
     let i = nodeHeight `mod` diffInterval net /= 0
@@ -579,7 +579,7 @@ lastNoMinDiff net bn@BlockNode{..} = do
         else return bn
 
 
-mtp :: BlockHeaders m => BlockNode -> m Timestamp
+mtp :: (BlockHeaders m) => BlockNode -> m Timestamp
 mtp bn
     | nodeHeight bn == 0 = return 0
     | otherwise = do
@@ -588,7 +588,7 @@ mtp bn
 
 
 firstGreaterOrEqual ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Network ->
     (BlockNode -> m Ordering) ->
     m (Maybe BlockNode)
@@ -596,7 +596,7 @@ firstGreaterOrEqual = binSearch False
 
 
 lastSmallerOrEqual ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Network ->
     (BlockNode -> m Ordering) ->
     m (Maybe BlockNode)
@@ -604,7 +604,7 @@ lastSmallerOrEqual = binSearch True
 
 
 binSearch ::
-    BlockHeaders m =>
+    (BlockHeaders m) =>
     Bool ->
     Network ->
     (BlockNode -> m Ordering) ->
@@ -643,13 +643,13 @@ binSearch top net f = runMaybeT $ do
         | otherwise = return b
 
 
-extremes :: BlockHeaders m => Network -> m (BlockNode, BlockNode)
+extremes :: (BlockHeaders m) => Network -> m (BlockNode, BlockNode)
 extremes net = do
     b <- getBestBlockHeader
     return (genesisNode net, b)
 
 
-middleBlock :: BlockHeaders m => BlockNode -> BlockNode -> m BlockNode
+middleBlock :: (BlockHeaders m) => BlockNode -> BlockNode -> m BlockNode
 middleBlock a b =
     getAncestor h b >>= \case
         Nothing -> error "You fell into a pit full of mud and snakes"
@@ -658,7 +658,7 @@ middleBlock a b =
     h = middleOf (nodeHeight a) (nodeHeight b)
 
 
-middleOf :: Integral a => a -> a -> a
+middleOf :: (Integral a) => a -> a -> a
 middleOf a b = a + ((b - a) `div` 2)
 
 
@@ -722,7 +722,7 @@ computeAssertBits halflife anchor_bits time_diff height_diff =
 -- | Returns the work required on a block header given the previous block. This
 -- coresponds to bitcoind function GetNextWorkRequired in main.cpp.
 nextPowWorkRequired ::
-    BlockHeaders m => Network -> BlockNode -> BlockHeader -> m Word32
+    (BlockHeaders m) => Network -> BlockNode -> BlockHeader -> m Word32
 nextPowWorkRequired net par bh
     | nodeHeight par + 1 `mod` diffInterval net /= 0 =
         if getAllowMinDifficultyBlocks net
@@ -811,7 +811,7 @@ chooseBest b1 b2
 
 
 -- | Get list of blocks for a block locator.
-blockLocatorNodes :: BlockHeaders m => BlockNode -> m [BlockNode]
+blockLocatorNodes :: (BlockHeaders m) => BlockNode -> m [BlockNode]
 blockLocatorNodes best =
     reverse <$> go [] best 1
   where
@@ -833,7 +833,7 @@ blockLocatorNodes best =
 
 
 -- | Get block locator.
-blockLocator :: BlockHeaders m => BlockNode -> m BlockLocator
+blockLocator :: (BlockHeaders m) => BlockNode -> m BlockLocator
 blockLocator bn = map (headerHash . nodeHeader) <$> blockLocatorNodes bn
 
 
@@ -872,7 +872,7 @@ appendBlocks net seed bh i =
 
 
 -- | Find the last common block ancestor between provided block headers.
-splitPoint :: BlockHeaders m => BlockNode -> BlockNode -> m BlockNode
+splitPoint :: (BlockHeaders m) => BlockNode -> BlockNode -> m BlockNode
 splitPoint l r = do
     let h = min (nodeHeight l) (nodeHeight r)
     ll <- fromMaybe e <$> getAncestor h l
@@ -905,5 +905,5 @@ computeSubsidy net height =
             else ini `shiftR` fromIntegral halvings
 
 
-encodeToShort :: Binary a => a -> ShortByteString
+encodeToShort :: (Binary a) => a -> ShortByteString
 encodeToShort = toShort . U.encodeS

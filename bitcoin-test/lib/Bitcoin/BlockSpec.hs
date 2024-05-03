@@ -114,7 +114,7 @@ withChain :: Network -> State HeaderMemory a -> a
 withChain net f = evalState f (initialChain net)
 
 
-chain :: BlockHeaders m => Network -> BlockHeader -> Int -> m ()
+chain :: (BlockHeaders m) => Network -> BlockHeader -> Int -> m ()
 chain net bh i = do
     bnsE <- connectBlocks net myTime bhs
     either error (const $ return ()) bnsE

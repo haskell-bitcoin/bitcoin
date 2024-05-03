@@ -1,23 +1,26 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Bitcoin.Transaction.TaprootSpec (spec) where
 
 import Bitcoin (
     MAST (..),
-    PubKey,
     PubKeyI (PubKeyI),
+    PubKeyXO,
+    PubKeyXY,
     ScriptOutput,
     ScriptPathData (..),
     TaprootOutput (TaprootOutput),
     TaprootWitness (ScriptPathSpend),
-    XOnlyPubKey (..),
     addrToText,
     btc,
     decodeHex,
     encodeTaprootWitness,
     getMerkleProofs,
+    importPubKeyXO,
+    importPubKeyXY,
     mastCommitment,
     outputAddress,
     taprootInternalKey,
@@ -25,6 +28,7 @@ import Bitcoin (
     taprootOutputKey,
     taprootScriptOutput,
     verifyScriptPathData,
+    xyToXO,
  )
 import Bitcoin.Orphans ()
 import qualified Bitcoin.Util as U
@@ -34,9 +38,11 @@ import Control.Monad (zipWithM, (<=<))
 import Data.Aeson (FromJSON (parseJSON), withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser)
 import qualified Data.ByteArray as BA
+import Data.ByteArray.Encoding
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word8)
 import Test.HUnit (assertBool, (@?=))
@@ -72,10 +78,10 @@ testHashes testData =
 
 testOutputKey :: TestScriptPubKey -> IO ()
 testOutputKey testData = do
-    XOnlyPubKey (taprootOutputKey theOutput) @?= theOutputKey
+    (fst . xyToXO) (taprootOutputKey theOutput) @?= theOutputKey
   where
     theOutput = tspkGiven testData
-    theOutputKey = XOnlyPubKey . spkiTweakedPubKey $ tspkIntermediary testData
+    theOutputKey = spkiTweakedPubKey $ tspkIntermediary testData
 
 
 testScriptOutput :: TestScriptPubKey -> IO ()
@@ -85,7 +91,7 @@ testScriptOutput testData =
 
 testControlBlocks :: TestScriptPubKey -> IO ()
 testControlBlocks testData = do
-    mapM_ onExamples exampleControlBlocks
+    mapM_ (onExamples . fmap (convertToBase Base16)) exampleControlBlocks
     mapM_ checkVerification scriptPathSpends
   where
     theOutput = tspkGiven testData
@@ -102,19 +108,13 @@ testControlBlocks testData = do
             { scriptPathAnnex = Nothing
             , scriptPathStack = mempty
             , scriptPathScript
-            , scriptPathExternalIsOdd = odd $ keyParity theOutputKey
+            , scriptPathExternalIsOdd = snd . xyToXO $ theOutputKey
             , scriptPathLeafVersion
             , scriptPathInternalKey = taprootInternalKey theOutput
             , scriptPathControl = BA.convert <$> proof
             }
-    onExamples = zipWithM (@?=) calculatedControlBlocks
+    onExamples = zipWithM (@?=) (fmap (convertToBase @ByteString @ByteString Base16) calculatedControlBlocks)
     checkVerification = assertBool "Script verifies" . verifyScriptPathData theOutputKey
-
-
-keyParity :: PubKey -> Word8
-keyParity key = case BS.unpack . U.encodeS $ PubKeyI key True of
-    0x02 : _ -> 0x00
-    _ -> 0x01
 
 
 testAddress :: TestScriptPubKey -> IO ()
@@ -130,7 +130,7 @@ instance FromJSON SpkGiven where
     parseJSON = withObject "SpkGiven" $ \obj ->
         fmap SpkGiven $
             TaprootOutput
-                <$> (xOnlyPubKey <$> obj .: "internalPubkey")
+                <$> (maybe (fail "Invalid Public Key") pure . (importPubKeyXO <=< decodeHex) =<< obj .: "internalPubkey")
                 <*> (obj .:? "scriptTree" >>= traverse parseScriptTree)
       where
         parseScriptTree v =
@@ -151,7 +151,7 @@ instance FromJSON SpkGiven where
 data SpkIntermediary = SpkIntermediary
     { spkiLeafHashes :: Maybe [ByteString]
     , spkiMerkleRoot :: Maybe ByteString
-    , spkiTweakedPubKey :: PubKey
+    , spkiTweakedPubKey :: PubKeyXO
     }
 
 
@@ -160,7 +160,7 @@ instance FromJSON SpkIntermediary where
         SpkIntermediary
             <$> (obj .:? "leafHashes" >>= (traverse . traverse) jsonHex)
             <*> (obj .: "merkleRoot" >>= traverse jsonHex)
-            <*> (xOnlyPubKey <$> obj .: "tweakedPubkey")
+            <*> (obj .: "tweakedPubkey" >>= maybe (fail "Invalid Public Key") pure . (importPubKeyXO <=< decodeHex))
 
 
 data SpkExpected = SpkExpected

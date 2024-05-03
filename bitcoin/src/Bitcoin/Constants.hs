@@ -27,7 +27,7 @@ import Data.String (IsString)
 
 
 -- | Version of Bitcoin package.
-versionString :: IsString a => a
+versionString :: (IsString a) => a
 
 #ifdef CURRENT_PACKAGE_VERSION
 versionString = CURRENT_PACKAGE_VERSION

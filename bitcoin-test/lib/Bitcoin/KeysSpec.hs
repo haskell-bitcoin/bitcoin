@@ -3,7 +3,7 @@
 
 module Bitcoin.KeysSpec (spec) where
 
-import Bitcoin (getSecKey, secKey)
+import Bitcoin (exportSecKey, importSecKey)
 import Bitcoin.Address (
     addrToText,
     addressToOutput,
@@ -147,7 +147,7 @@ testMiniKey :: Assertion
 testMiniKey =
     assertEqual "fromMiniKey" (Just res) (go "S6c56bnXQiBjk9mqSYE7ykVQ7NzrRy")
   where
-    go = fmap (encodeHex . getSecKey . secKeyData) . fromMiniKey
+    go = fmap (encodeHex . exportSecKey . secKeyData) . fromMiniKey
     res = "4c7a9640c72dc2099f23715d0c8a0d8a35f8906e3cab61dd3f78b67bf887c9ab"
 
 
@@ -161,14 +161,14 @@ testKeyIOValidVector (a, payload, obj)
         -- Test from WIF to SecKey
         let Just isComp = A.lookup "isCompressed" obj >>= getBool
             prvKeyM = fromWif net a
-            prvKeyHexM = encodeHex . getSecKey . secKeyData <$> prvKeyM
+            prvKeyHexM = encodeHex . exportSecKey . secKeyData <$> prvKeyM
         assertBool "Valid PrvKey" $ isJust prvKeyM
         assertEqual "Valid compression" (Just isComp) (secKeyCompressed <$> prvKeyM)
         assertEqual "WIF matches payload" (Just payload) prvKeyHexM
         let prvAsPubM = (eitherToMaybe . decodeOutputBS <=< decodeHex) a
         assertBool "PrvKey is invalid ScriptOutput" $ isNothing prvAsPubM
         -- Test from SecKey to WIF
-        let secM = secKey =<< decodeHex payload
+        let secM = importSecKey =<< decodeHex payload
             wifM = toWif net . wrapSecKey isComp <$> secM
         assertEqual "Payload matches WIF" (Just a) wifM
     | otherwise = do
@@ -178,7 +178,7 @@ testKeyIOValidVector (a, payload, obj)
         assertBool ("Valid Address " <> cs a) $ isJust addrM
         assertEqual "Address matches payload" (Just payload) scriptM
         let pubAsWifM = fromWif net a
-            pubAsSecM = secKey =<< decodeHex a
+            pubAsSecM = importSecKey =<< decodeHex a
         assertBool "Address is invalid Wif" $ isNothing pubAsWifM
         assertBool "Address is invalid PrvKey" $ isNothing pubAsSecM
         -- Test Script to Addr
@@ -203,7 +203,7 @@ testKeyIOValidVector (a, payload, obj)
 testKeyIOInvalidVector :: [Text] -> Assertion
 testKeyIOInvalidVector [a] = do
     let wifMs = (`fromWif` a) <$> allNets
-        secKeyM = (secKey <=< decodeHex) a :: Maybe SecKey
+        secKeyM = (importSecKey <=< decodeHex) a :: Maybe SecKey
         scriptM = (eitherToMaybe . decodeOutputBS <=< decodeHex) a :: Maybe ScriptOutput
     assertBool "Payload is invalid WIF" $ all isNothing wifMs
     assertBool "Payload is invalid SecKey" $ isNothing secKeyM
@@ -260,10 +260,10 @@ sigMsg =
 
 testSignature :: Hash256 -> Assertion
 testSignature h = do
-    let sign1 = signHash (secKeyData sec1) h
-        sign2 = signHash (secKeyData sec2) h
-        sign1C = signHash (secKeyData sec1C) h
-        sign2C = signHash (secKeyData sec2C) h
+    sign1 <- maybe (assertFailure "Signing Failed") pure $ signHash (secKeyData sec1) h
+    sign2 <- maybe (assertFailure "Signing Failed") pure $ signHash (secKeyData sec2) h
+    sign1C <- maybe (assertFailure "Signing Failed") pure $ signHash (secKeyData sec1C) h
+    sign2C <- maybe (assertFailure "Signing Failed") pure $ signHash (secKeyData sec2C) h
     assertBool "Key 1, Sign1" $ verifyHashSig h sign1 (pubKeyPoint pub1)
     assertBool "Key 1, Sign2" $ not $ verifyHashSig h sign2 (pubKeyPoint pub1)
     assertBool "Key 1, Sign1C" $ verifyHashSig h sign1C (pubKeyPoint pub1)

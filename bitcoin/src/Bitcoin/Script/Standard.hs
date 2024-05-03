@@ -269,7 +269,7 @@ encodeOutput s = Script $ case s of
     (DataCarrier d) -> [OP_RETURN, opPushData d]
 
 
-pushItem :: Binary a => a -> ScriptOp
+pushItem :: (Binary a) => a -> ScriptOp
 pushItem = opPushData . U.encodeS
 
 

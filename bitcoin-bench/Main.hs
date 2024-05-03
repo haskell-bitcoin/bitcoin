@@ -74,6 +74,6 @@ roundTrip _ label xHex =
     Just !xBytes = decodeHex $ Text.filter (/= '\n') xHex
     Right !x = binDecode xBytes
 
-    binDecode :: Binary a => ByteString -> Either String a
+    binDecode :: (Binary a) => ByteString -> Either String a
     binDecode = bimap pr3 pr3 . Bin.decodeOrFail . BSL.fromStrict
     pr3 (_, _, z) = z

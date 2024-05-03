@@ -3,9 +3,10 @@
 
 module Bitcoin.Transaction.PartialSpec (spec) where
 
+import Bitcoin (importPubKeyXY, importSecKey)
 import Bitcoin.Address (addressToScript, pubKeyAddr)
 import Bitcoin.Constants (Network, btc)
-import Bitcoin.Crypto (derivePubKey, secKey, signHash)
+import Bitcoin.Crypto (derivePubKey, importSecKey, signHash)
 import Bitcoin.Keys (
     DerivPathI (Deriv, (:/), (:|)),
     PubKeyI (..),
@@ -71,7 +72,7 @@ import Data.ByteString.Base64 (decodeBase64)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight, isLeft, isRight)
 import Data.HashMap.Strict (fromList, singleton)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
@@ -237,7 +238,7 @@ vec5Test = do
                         fromList
                             [
                                 ( PubKeyI
-                                    { pubKeyPoint = "03b1341ccba7683b6af4f1238cd6e97e7167d569fac47f1e48d47541844355bd46"
+                                    { pubKeyPoint = (fromJust . (importPubKeyXY <=< decodeHex)) "03b1341ccba7683b6af4f1238cd6e97e7167d569fac47f1e48d47541844355bd46"
                                     , pubKeyCompressed = True
                                     }
                                 , (fromJust . decodeHex) "304302200424b58effaaa694e1559ea5c93bbfd4a89064224055cdf070b6771469442d07021f5c8eb0fea6516d60b8acb33ad64ede60e8785bfb3aa94b99bdf86151db9a9a01"
@@ -262,14 +263,14 @@ vec5Test = do
                         fromList
                             [
                                 ( PubKeyI
-                                    { pubKeyPoint = "03b1341ccba7683b6af4f1238cd6e97e7167d569fac47f1e48d47541844355bd46"
+                                    { pubKeyPoint = (fromJust . (importPubKeyXY <=< decodeHex)) "03b1341ccba7683b6af4f1238cd6e97e7167d569fac47f1e48d47541844355bd46"
                                     , pubKeyCompressed = True
                                     }
                                 , ("b4a6ba67", [hardIndex 0, hardIndex 0, hardIndex 4])
                                 )
                             ,
                                 ( PubKeyI
-                                    { pubKeyPoint = "03de55d1e1dac805e3f8a58c1fbf9b94c02f3dbaafe127fefca4995f26f82083bd"
+                                    { pubKeyPoint = (fromJust . (importPubKeyXY <=< decodeHex)) "03de55d1e1dac805e3f8a58c1fbf9b94c02f3dbaafe127fefca4995f26f82083bd"
                                     , pubKeyCompressed = True
                                     }
                                 , ("b4a6ba67", [hardIndex 0, hardIndex 0, hardIndex 5])
@@ -345,7 +346,7 @@ psbtSignerTest = do
   where
     signer = secKeySigner theSecKey <> xPrvSigner xprv (Just origin)
 
-    Just theSecKey = secKey "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    Just theSecKey = importSecKey "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     thePubKey = PubKeyI{pubKeyPoint = derivePubKey theSecKey, pubKeyCompressed = True}
 
     rootXPrv = makeXPrvKey "psbtSignerTest"
@@ -445,6 +446,7 @@ unfinalizedPkhPSBT net (prvKey, pubKey) =
         { inputs = [emptyInput{nonWitnessUtxo = Just prevTx, partialSigs = singleton pubKey sig}]
         }
   where
+    signHash' a b = fromMaybe (error "Signing Failed") $ signHash a b
     currTx = unfinalizedTx (txHash prevTx)
     prevTx = testUtxo [prevOut]
     prevOutScript = addressToScript (pubKeyAddr pubKey)
@@ -454,7 +456,7 @@ unfinalizedPkhPSBT net (prvKey, pubKey) =
             , scriptOutput = U.encodeS prevOutScript
             }
     h = txSigHash net currTx prevOutScript (outValue prevOut) 0 sigHashAll
-    sig = encodeTxSig $ TxSignature (signHash (secKeyData prvKey) h) sigHashAll
+    sig = encodeTxSig $ TxSignature (signHash' (secKeyData prvKey) h) sigHashAll
 
 
 arbitraryMultiSig :: Gen ([(SecKeyI, PubKeyI)], Int)
@@ -476,13 +478,14 @@ unfinalizedMsPSBT net (keys, m) =
             ]
         }
   where
+    signHash' a b = fromMaybe (error "Signing Failed") $ signHash a b
     currTx = unfinalizedTx (txHash prevTx)
     prevTx = testUtxo [prevOut]
     prevOutScript = encodeOutput $ PayMulSig (map snd keys) m
     prevOut = TxOut{outValue = 200000000, scriptOutput = encodeOutputBS (toP2SH prevOutScript)}
     h = txSigHash net currTx prevOutScript (outValue prevOut) 0 sigHashAll
     sigs = fromList $ map sig keys
-    sig (prvKey, pubKey) = (pubKey, encodeTxSig $ TxSignature (signHash (secKeyData prvKey) h) sigHashAll)
+    sig (prvKey, pubKey) = (pubKey, encodeTxSig $ TxSignature (signHash' (secKeyData prvKey) h) sigHashAll)
 
 
 unfinalizedTx :: TxHash -> Tx

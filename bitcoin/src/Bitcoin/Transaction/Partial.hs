@@ -360,7 +360,7 @@ onPrevTxOut net signer tx ix input prevTxData =
   where
     newSigs = HM.mapWithKey sigForInput sigKeys
     sigForInput thePubKey theSecKey =
-        encodeTxSig . makeSignature net tx ix theSigInput $
+        maybe (error "Signature Gen Failed") encodeTxSig . makeSignature net tx ix theSigInput $
             SecKeyI theSecKey (pubKeyCompressed thePubKey)
 
     theSigInput =
@@ -771,13 +771,13 @@ getSizedBytes getItem = do
     isolate n getItem
 
 
-putKeyValue :: Enum t => t -> Put -> Put
+putKeyValue :: (Enum t) => t -> Put -> Put
 putKeyValue t v = do
     putKey t
     putSizedBytes v
 
 
-putKey :: Enum t => t -> Put
+putKey :: (Enum t) => t -> Put
 putKey t = do
     putVarInt (1 :: Word8)
     putWord8 (enumWord8 t)
@@ -904,7 +904,7 @@ getHDPath keySize =
         <*> (unPSBTHDPath <$> get)
 
 
-putHDPath :: Enum t => t -> HashMap PubKeyI (Fingerprint, [KeyIndex]) -> Put
+putHDPath :: (Enum t) => t -> HashMap PubKeyI (Fingerprint, [KeyIndex]) -> Put
 putHDPath t = putPubKeyMap put t . fmap PSBTHDPath
 
 
@@ -935,7 +935,7 @@ instance Binary PSBTHDPath where
         bs = runPut $ put fp >> mapM_ putWord32le kis
 
 
-putPubKeyMap :: Enum t => (a -> Put) -> t -> HashMap PubKeyI a -> Put
+putPubKeyMap :: (Enum t) => (a -> Put) -> t -> HashMap PubKeyI a -> Put
 putPubKeyMap f t =
     void . HashMap.traverseWithKey putItem
   where
@@ -944,7 +944,7 @@ putPubKeyMap f t =
         f v
 
 
-enumWord8 :: Enum a => a -> Word8
+enumWord8 :: (Enum a) => a -> Word8
 enumWord8 = fromIntegral . fromEnum
 
 
@@ -953,7 +953,7 @@ word8Enum n | n <= enumWord8 (maxBound :: a) = Right . toEnum $ fromIntegral n
 word8Enum n = Left n
 
 
-whenJust :: Monad m => (a -> m ()) -> Maybe a -> m ()
+whenJust :: (Monad m) => (a -> m ()) -> Maybe a -> m ()
 whenJust = maybe (return ())
 
 

@@ -172,17 +172,17 @@ instance Binary Hash160 where
 
 
 -- | Use this function to produce hashes during the process of serialization
-hashWithL :: HashAlgorithm alg => alg -> BSL.ByteString -> Digest alg
+hashWithL :: (HashAlgorithm alg) => alg -> BSL.ByteString -> Digest alg
 hashWithL _ = hashFinalize . hashUpdates hashInit . BSL.toChunks
 
 
 -- | Calculate SHA512 hash.
-sha512 :: ByteArrayAccess b => b -> Hash512
+sha512 :: (ByteArrayAccess b) => b -> Hash512
 sha512 = Hash512 . BSS.toShort . BA.convert . hashWith SHA512
 
 
 -- | Calculate SHA256 hash.
-sha256 :: ByteArrayAccess b => b -> Hash256
+sha256 :: (ByteArrayAccess b) => b -> Hash256
 sha256 = Hash256 . BSS.toShort . BA.convert . hashWith SHA256
 
 
@@ -192,17 +192,17 @@ sha256L = Hash256 . BSS.toShort . BA.convert . hashWithL SHA256
 
 
 -- | Calculate RIPEMD160 hash.
-ripemd160 :: ByteArrayAccess b => b -> Hash160
+ripemd160 :: (ByteArrayAccess b) => b -> Hash160
 ripemd160 = Hash160 . BSS.toShort . BA.convert . hashWith RIPEMD160
 
 
 -- | Claculate SHA1 hash.
-sha1 :: ByteArrayAccess b => b -> Hash160
+sha1 :: (ByteArrayAccess b) => b -> Hash160
 sha1 = Hash160 . BSS.toShort . BA.convert . hashWith SHA1
 
 
 -- | Compute two rounds of SHA-256.
-doubleSHA256 :: ByteArrayAccess b => b -> Hash256
+doubleSHA256 :: (ByteArrayAccess b) => b -> Hash256
 doubleSHA256 =
     Hash256 . BSS.toShort . BA.convert . hashWith SHA256 . hashWith SHA256
 
@@ -214,7 +214,7 @@ doubleSHA256L =
 
 
 -- | Compute SHA-256 followed by RIPMED-160.
-addressHash :: ByteArrayAccess b => b -> Hash160
+addressHash :: (ByteArrayAccess b) => b -> Hash160
 addressHash =
     Hash160 . BSS.toShort . BA.convert . hashWith RIPEMD160 . hashWith SHA256
 

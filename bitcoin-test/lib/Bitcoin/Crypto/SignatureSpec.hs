@@ -2,7 +2,7 @@
 
 module Bitcoin.Crypto.SignatureSpec (spec) where
 
-import Bitcoin (getCompactSig)
+import Bitcoin (exportSignatureCompact)
 import Bitcoin.Address (
     Address (WitnessPubKeyAddress),
     pubKeyWitnessAddr,
@@ -10,19 +10,19 @@ import Bitcoin.Address (
 import Bitcoin.Constants (btc)
 import Bitcoin.Crypto (
     SecKey,
-    Sig,
+    Signature,
     decodeStrictSig,
     derivePubKey,
-    exportCompactSig,
-    exportSig,
+    ecdsaSign,
+    exportSignatureCompact,
+    exportSignatureDer,
     getSig,
-    importSig,
+    importSecKey,
+    importSignatureDer,
     isCanonicalHalfOrder,
     putSig,
-    secKey,
     sha256,
     signHash,
-    signMsg,
     verifyHashSig,
  )
 import Bitcoin.Keys (PubKeyI, derivePubKeyI, wrapSecKey)
@@ -53,7 +53,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
 import Test.HUnit (
@@ -81,10 +81,10 @@ spec = do
                 testIsCanonical . lst3
         prop "decodeStrictSig . exportSig identity" $
             forAll arbitrarySignature $
-                (\s -> decodeStrictSig (exportSig s) == Just s) . lst3
+                (\s -> decodeStrictSig (exportSignatureDer s) == Just s) . lst3
         prop "importSig . exportSig identity" $
             forAll arbitrarySignature $
-                (\s -> importSig (exportSig s) == Just s) . lst3
+                (\s -> importSignatureDer (exportSignatureDer s) == Just s) . lst3
         prop "getSig . putSig identity" $
             forAll arbitrarySignature $ \(_, _, s) ->
                 (U.runGet getSig . runPut . putSig) s == Right s
@@ -105,7 +105,7 @@ spec = do
 
 -- github.com/bitcoin/bitcoin/blob/master/src/script.cpp
 -- from function IsCanonicalSignature
-testIsCanonical :: Sig -> Bool
+testIsCanonical :: Signature -> Bool
 testIsCanonical sig =
     not $
         -- Non-canonical signature: too short
@@ -156,7 +156,7 @@ testIsCanonical sig =
                 && not (testBit (BS.index s (fromIntegral rlen + 7)) 7)
             )
   where
-    s = exportSig sig
+    s = exportSignatureDer sig
     len = fromIntegral $ BS.length s
     rlen = BS.index s 3
     slen = BS.index s (fromIntegral rlen + 5)
@@ -175,10 +175,13 @@ data ValidImpl
 implSig :: Text
 implSig =
     encodeHex $
-        exportSig $
-            signMsg
-                "0000000000000000000000000000000000000000000000000000000000000001"
-                "0000000000000000000000000000000000000000000000000000000000000000"
+        exportSignatureDer $
+            fromMaybe (error "Signing Failed") $
+                ecdsaSign key "0000000000000000000000000000000000000000000000000000000000000000"
+  where
+    key =
+        fromMaybe (error "Invalid SecKey") . (importSecKey <=< decodeHex) $
+            "0000000000000000000000000000000000000000000000000000000000000001"
 
 
 -- We have test vectors for these cases
@@ -201,7 +204,7 @@ validImplMap =
 
 
 getImpl :: Maybe ValidImpl
-getImpl = implSig `Map.lookup` validImplMap
+getImpl = pure ImplCore
 
 
 rfc6979files :: ValidImpl -> (FilePath, FilePath)
@@ -223,18 +226,18 @@ checkDistSig go =
 -- github.com/trezor/python-ecdsa/blob/master/ecdsa/test_pyecdsa.py
 
 toVector :: (Text, Text, Text) -> (SecKey, ByteString, Text)
-toVector (prv, m, res) = (fromJust $ (secKey <=< decodeHex) prv, cs m, res)
+toVector (prv, m, res) = (fromJust $ (importSecKey <=< decodeHex) prv, cs m, res)
 
 
 testRFC6979Vector :: (SecKey, ByteString, Text) -> Assertion
 testRFC6979Vector (prv, m, res) = do
-    assertEqual "RFC 6979 Vector" res $ encodeHex . getCompactSig $ exportCompactSig s
+    assertEqual "RFC 6979 Vector" res $ encodeHex . exportSignatureCompact $ s
     assertBool "Signature is valid" $ verifyHashSig h s (derivePubKey prv)
     assertBool "Signature is canonical" $ testIsCanonical s
     assertBool "Signature is normalized" $ isCanonicalHalfOrder s
   where
     h = sha256 m
-    s = signHash prv h
+    s = fromMaybe (error "Signing Failed") $ signHash prv h
 
 
 -- Test vectors from:
@@ -242,13 +245,13 @@ testRFC6979Vector (prv, m, res) = do
 
 testRFC6979DERVector :: (SecKey, ByteString, Text) -> Assertion
 testRFC6979DERVector (prv, m, res) = do
-    assertEqual "RFC 6979 DER Vector" res (encodeHex $ exportSig s)
+    assertEqual "RFC 6979 DER Vector" res (encodeHex $ exportSignatureDer s)
     assertBool "DER Signature is valid" $ verifyHashSig h s (derivePubKey prv)
     assertBool "DER Signature is canonical" $ testIsCanonical s
     assertBool "DER Signature is normalized" $ isCanonicalHalfOrder s
   where
     h = sha256 m
-    s = signHash prv h
+    s = fromMaybe (error "Signing Failed") $ signHash prv h
 
 
 -- Reproduce the P2WPKH example from BIP 143
@@ -497,7 +500,7 @@ testBip143p2shp2wpkhMulsig =
 
 
 secHexKey :: Text -> Maybe SecKey
-secHexKey = decodeHex >=> secKey
+secHexKey = decodeHex >=> importSecKey
 
 
 toPubKey :: SecKey -> PubKeyI

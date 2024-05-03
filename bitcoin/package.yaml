@@ -1,5 +1,5 @@
 name: bitcoin
-version: 0.1.0
+version: 0.1.1
 synopsis: Bitcoin library for Haskell
 description: Please see the README on GitHub at <https://github.com/haskell-bitcoin/bitcoin#readme>
 category: Bitcoin, Finance, Network
@@ -28,7 +28,7 @@ dependencies:
   - murmur3 >= 1.0.3
   - network >= 3.1.1.1
   - split >= 0.2.3.3
-  - secp256k1-haskell >= 0.4.0 && < 1
+  - libsecp256k1 >= 0.2.0
   - string-conversions >= 0.4.0.1
   - text >= 1.2.3.0
   - transformers >= 0.5.6.2

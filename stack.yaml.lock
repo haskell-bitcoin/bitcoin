@@ -12,12 +12,12 @@ packages:
   original:
     hackage: cryptonite-0.30
 - completed:
-    hackage: libsecp256k1-0.2.0@sha256:1c64fa4f06a2681376263c8ce426339e32cdf30dd95b095c037505a1a351db95,2189
+    hackage: libsecp256k1-0.2.1@sha256:ffa0dcfcfd45125a60989a15d872aa687db1a7829fdb65c9a5e63404a2e8090f,2189
     pantry-tree:
-      sha256: 40df088f7d7b3ca61b93f08d27b0beefae6f35670fd272db69e68558df1f2d5c
+      sha256: 764ebbc62bc33ce650a920aaa1a20996861ad9d5a472c4a81b38a8771bc1df8b
       size: 902
   original:
-    hackage: libsecp256k1-0.2.0
+    hackage: libsecp256k1-0.2.1
 - completed:
     hackage: fourmolu-0.14.0.0@sha256:ba97d135f44cd5fb670dd47228ec3c65d3a886cc293a548510671c78c512c240,6755
     pantry-tree:

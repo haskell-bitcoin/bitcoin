@@ -1,11 +1,11 @@
 resolver: lts-22.6
-system-ghc: true
+system-ghc: false
 nix:
   packages:
     - secp256k1
     - pkg-config
 extra-deps:
-  - fourmolu-0.8.2.0
+  - fourmolu-0.14.0.0
   - cryptonite-0.30
   - libsecp256k1-0.2.0
 packages:

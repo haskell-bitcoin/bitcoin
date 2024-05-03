@@ -366,8 +366,8 @@ sigHashSpec net = do
 
 testSigHashOne :: Network -> Tx -> Script -> Word64 -> Bool -> Property
 testSigHashOne net tx s val acp =
-    not (null $ txIn tx)
-        ==> if length (txIn tx) > length (txOut tx)
+    not (null $ txIn tx) ==>
+        if length (txIn tx) > length (txOut tx)
             then res `shouldBe` one
             else res `shouldNotBe` one
   where

@@ -93,7 +93,7 @@ arbitraryNetwork :: Gen Network
 arbitraryNetwork = elements allNets
 
 
-arbitraryNetData :: Arbitrary a => Gen (Network, a)
+arbitraryNetData :: (Arbitrary a) => Gen (Network, a)
 arbitraryNetData = do
     net <- arbitraryNetwork
     x <- arbitrary

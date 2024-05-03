@@ -415,7 +415,7 @@ instance Binary VarInt where
             Put.putWord64le x
 
 
-putVarInt :: Integral a => a -> Put
+putVarInt :: (Integral a) => a -> Put
 putVarInt = put . VarInt . fromIntegral
 
 

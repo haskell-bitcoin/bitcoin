@@ -5,9 +5,11 @@ nix:
     - secp256k1
     - pkg-config
 extra-deps:
-  - fourmolu-0.14.0.0
   - cryptonite-0.30
   - libsecp256k1-0.2.0
+  # for fourmolu CI
+  - fourmolu-0.14.0.0
+  - ghc-lib-parser-9.6.2.20230523
 packages:
   - ./bitcoin
   - ./bitcoin-test

@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
---Module      : Bitcoin.Transaction.Genesis
---Copyright   : No rights reserved
---License     : UNLICENSE
---Maintainer  : jprupp@protonmail.ch
---Stability   : experimental
---Portability : POSIX
+-- Module      : Bitcoin.Transaction.Genesis
+-- Copyright   : No rights reserved
+-- License     : UNLICENSE
+-- Maintainer  : jprupp@protonmail.ch
+-- Stability   : experimental
+-- Portability : POSIX
 --
---Code related to transactions parsing and serialization.
+-- Code related to transactions parsing and serialization.
 module Bitcoin.Transaction.Genesis (
     genesisTx,
 ) where

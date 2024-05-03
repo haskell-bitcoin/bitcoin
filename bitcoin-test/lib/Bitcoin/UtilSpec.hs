@@ -114,7 +114,7 @@ testMaybeToEither m str = maybeToEither str m == Left str
 
 {-- Test Utilities --}
 
-readTestFile :: A.FromJSON a => FilePath -> IO a
+readTestFile :: (A.FromJSON a) => FilePath -> IO a
 readTestFile fp =
     A.eitherDecodeFileStrict ("data/" <> fp) >>= either (error . message) return
   where

@@ -306,7 +306,7 @@ invalidMss =
     ]
 
 
-binWordsToBS :: Binary a => [a] -> BSL.ByteString
+binWordsToBS :: (Binary a) => [a] -> BSL.ByteString
 binWordsToBS = foldr f BSL.empty
   where
     f b a = a `BSL.append` Bin.encode b

@@ -76,7 +76,7 @@ type HRP = Text
 type Data = [Word8]
 
 
-(.>>.), (.<<.) :: Bits a => a -> Int -> a
+(.>>.), (.<<.) :: (Bits a) => a -> Int -> a
 (.>>.) = unsafeShiftR
 (.<<.) = unsafeShiftL
 
@@ -94,14 +94,14 @@ instance Ix Word5 where
 
 
 -- | Convert an integer number into a five-bit word.
-word5 :: Integral a => a -> Word5
+word5 :: (Integral a) => a -> Word5
 word5 x = UnsafeWord5 (fromIntegral x .&. 31)
 {-# INLINE word5 #-}
 {-# SPECIALIZE INLINE word5 :: Word8 -> Word5 #-}
 
 
 -- | Convert a five-bit word into a number.
-fromWord5 :: Num a => Word5 -> a
+fromWord5 :: (Num a) => Word5 -> a
 fromWord5 (UnsafeWord5 x) = fromIntegral x
 {-# INLINE fromWord5 #-}
 {-# SPECIALIZE INLINE fromWord5 :: Word5 -> Word8 #-}
@@ -165,9 +165,9 @@ bech32VerifyChecksum :: HRP -> [Word5] -> Maybe Bech32Encoding
 bech32VerifyChecksum hrp dat =
     let poly = bech32Polymod (bech32HRPExpand hrp ++ dat)
      in if
-                | poly == bech32Const Bech32 -> Just Bech32
-                | poly == bech32Const Bech32m -> Just Bech32m
-                | otherwise -> Nothing
+            | poly == bech32Const Bech32 -> Just Bech32
+            | poly == bech32Const Bech32m -> Just Bech32m
+            | otherwise -> Nothing
 
 
 -- | Maximum length of a Bech32 result.
@@ -300,7 +300,7 @@ noPadding frombits bits padValue result = do
 -- \(2^{tobits}\). {frombits} and {twobits} must be positive and
 -- \(2^{frombits}\) and \(2^{tobits}\) must be smaller than the size of Word.
 -- Every value in 'dat' must be strictly smaller than \(2^{frombits}\).
-convertBits :: Functor f => [Word] -> Int -> Int -> Pad f -> f [Word]
+convertBits :: (Functor f) => [Word] -> Int -> Int -> Pad f -> f [Word]
 convertBits dat frombits tobits pad = concat . reverse <$> go dat 0 0 []
   where
     go [] acc bits result =

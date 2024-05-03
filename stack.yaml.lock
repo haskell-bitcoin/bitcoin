@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: fourmolu-0.14.0.0@sha256:ba97d135f44cd5fb670dd47228ec3c65d3a886cc293a548510671c78c512c240,6755
-    pantry-tree:
-      sha256: e70f2d81866ac2cb200e8ebc5372186d5bb293e253b4e51fadba2309bb40ed85
-      size: 156343
-  original:
-    hackage: fourmolu-0.14.0.0
-- completed:
     hackage: cryptonite-0.30@sha256:12c85dea7be63e5ad90bcb487eb3846bf3c413347f94336fa1dede7b28f9936a,18301
     pantry-tree:
       sha256: df1cbe4cc40d569cc75ffed40bc5deac43cb085653980b42b9b6a5d4b745a30a
@@ -25,6 +18,20 @@ packages:
       size: 902
   original:
     hackage: libsecp256k1-0.2.0
+- completed:
+    hackage: fourmolu-0.14.0.0@sha256:ba97d135f44cd5fb670dd47228ec3c65d3a886cc293a548510671c78c512c240,6755
+    pantry-tree:
+      sha256: e70f2d81866ac2cb200e8ebc5372186d5bb293e253b4e51fadba2309bb40ed85
+      size: 156343
+  original:
+    hackage: fourmolu-0.14.0.0
+- completed:
+    hackage: ghc-lib-parser-9.6.2.20230523@sha256:160fc11671ce69e756d67f42a75c564863f59b81782a3d23efc27a845d61041b,15694
+    pantry-tree:
+      sha256: 99328c298629fa921985d3de081354625463b659ca7122a1971e548d7051c68a
+      size: 33893
+  original:
+    hackage: ghc-lib-parser-9.6.2.20230523
 snapshots:
 - completed:
     sha256: 1b4c2669e26fa828451830ed4725e4d406acc25a1fa24fcc039465dd13d7a575
